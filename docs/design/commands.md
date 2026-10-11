@@ -1,6 +1,6 @@
 ---
 covers: ["skills/*/SKILL.md", "src/lib/apply.mjs", "src/lib/block.mjs"]
-verified: 2026-10-11
+verified: 2026-10-11T15:55:59
 ---
 
 # Commands
@@ -36,7 +36,7 @@ It never asks what it can read from the repo, never asks "should I continue?" an
 | --- | --- | --- |
 | First time | No Longevo block in AGENTS.md | A full review report and a numbered list of changes |
 | New session | There is a Longevo block | 10 lines or less: commits since the last session, stale docs, high-severity findings, broken commands and paths. A list of changes only if there is one, like an out-of-date `docs/coverage.md` |
-| Audit | You ask with `--full`, or ask for an audit or a review only | The full report, with no list and no writes |
+| Audit | You say not to change anything, or pass `--full` | The full report, with no list and no writes |
 
 The date of the last session is stored inside `.git`. In Claude Code, Cursor and Copilot CLI, `init` can run by itself at session start with a hook that only reports. In Codex and Gemini CLI you run it yourself.
 
@@ -76,7 +76,7 @@ The engine (`longevo.mjs apply`) writes the block, the `@AGENTS.md` line, the Ge
 
 A script lists living docs whose `covers` changed after the anchor, `covers` that match nothing, broken paths, rules whose code or test is gone, sources not checked in 30 days and briefs marked done. For each stale doc the model reads the code diff and the doc. If the doc is still true, it proposes only a new `verified` date. If not, it proposes a small diff, or asks which one is right when the doc and the code disagree. It reads external sources only through MCP servers the agent has, and says which ones it could not check.
 
-`sync` can write, from the list: `verified` dates, diffs to docs and rules, rules taken from finished briefs, `docs/sources.md` and `docs/coverage.md`. A script generates the last two.
+`sync` can write, from the list: `verified` dates, `checked` dates of sources, diffs to docs and rules, rules taken from finished briefs, `docs/sources.md` and `docs/coverage.md`. A script generates the last two.
 
 ## `brief`: input for spec-driven development
 

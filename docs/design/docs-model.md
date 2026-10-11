@@ -1,6 +1,6 @@
 ---
 covers: ["src/lib/docs.mjs", "src/lib/coverage.mjs", "src/lib/frontmatter.mjs"]
-verified: 2026-10-11
+verified: 2026-10-11T15:55:59
 ---
 
 # Docs model
@@ -93,7 +93,7 @@ Links to Notion, Confluence, Jira or Linear live only in the repo. Longevo never
 
 Longevo finds MCP servers in two ways: it reads the config of each agent (names only, never credentials), and it checks which tools the agent has in the session. Agents without MCP servers bring nothing new, but they still use the rules already in the repo.
 
-A script generates `docs/sources.md` from the `sources` in each doc's frontmatter: each source, the docs that cite it and when it was last checked. Whether a source changed at the origin is shown when `sync` runs, not stored.
+A script generates `docs/sources.md` from the `sources` in each doc's frontmatter: each source, the docs that cite it and the oldest date one of them checked it. Whether a source changed at the origin is shown when `sync` runs, not stored.
 
 ## Large repos
 

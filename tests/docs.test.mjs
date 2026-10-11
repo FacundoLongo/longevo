@@ -105,3 +105,8 @@ test('a second check on the same day, written with a time, clears the doc', () =
   commit(root, { 'docs/pay.md': DOC.replace('2026-10-01', '2026-10-11T18:35:12') }, 'verify again');
   assert.equal(docs(root).living[0].stale, false);
 });
+
+test('briefs and decisions with covers are records, not living docs', () => {
+  const root = makeRepo({ 'docs/work/2026-10-01-x/brief.md': DOC, 'docs/decisions/pay.md': DOC, 'src/pay/a.ts': '1' });
+  assert.deepEqual(docs(root).living, []);
+});

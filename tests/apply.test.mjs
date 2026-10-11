@@ -177,3 +177,35 @@ test('verifying twice in one day still changes the verified line', () => {
   assert.equal(result.status, 'written');
   assert.match(read(root, 'docs/a.md'), /^verified: 2026-10-11T18:35:12$/m);
 });
+
+test('creates a brief with its frontmatter and sections', () => {
+  const root = makeRepo({ 'src/refunds/a.ts': '1' });
+  const result = apply('brief', root, { slug: 'partial-refunds', task: 'https://github.com/o/r/issues/7', covers: ['src/refunds/**'] }, { today: '2026-10-11' });
+  assert.equal(result.file, 'docs/work/2026-10-11-partial-refunds/brief.md');
+  const text = read(root, result.file);
+  assert.ok(text.startsWith('---\nstatus: open\ntask: "https://github.com/o/r/issues/7"\ncovers: ["src/refunds/**"]\n---\n\n# Partial refunds\n'), text);
+  for (const heading of ['Goal', 'Rules that apply', 'Affected code and docs', 'Golden tests', 'What must not change', 'Open questions', 'Acceptance criteria', 'Tests']) {
+    assert.match(text, new RegExp(`^## ${heading}$`, 'm'));
+  }
+});
+
+test('refuses a slug that is not kebab case', () => {
+  const root = makeRepo({ 'a.ts': '1' });
+  for (const slug of ['../x', 'a/b', 'Has Spaces', 'dot.slug', '', 'x'.repeat(81)]) {
+    assert.throws(() => apply('brief', root, { slug, task: 'x', covers: ['a.ts'] }), /kebab/, slug);
+  }
+});
+
+test('never overwrites a brief', () => {
+  const root = makeRepo({ 'a.ts': '1' });
+  apply('brief', root, { slug: 'x', task: 't', covers: ['a.ts'] }, { today: '2026-10-11' });
+  assert.throws(() => apply('brief', root, { slug: 'x', task: 't', covers: ['a.ts'] }, { today: '2026-10-11' }), /already exists/);
+});
+
+test('marks a brief done', () => {
+  const root = makeRepo({ 'a.ts': '1', 'docs/a.md': '# A\n' });
+  const { file } = apply('brief', root, { slug: 'x', task: 't', covers: ['a.ts'] }, { today: '2026-10-11' });
+  assert.equal(apply('done', root, { doc: file }).status, 'written');
+  assert.match(read(root, file), /^status: done$/m);
+  assert.throws(() => apply('done', root, { doc: 'docs/a.md' }), /not a brief/);
+});

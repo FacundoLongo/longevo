@@ -1,0 +1,51 @@
+schema_version: "1.1"
+name: brief-from-issue
+description: The brief skill turns an issue into a brief that cites the refund rules, protects the amount limit with a regression test and writes WHEN/THEN criteria.
+context:
+  scaffold_script: scaffold.sh
+execution:
+  prompt: |
+    Prepare a brief for the task in issue.md with the longevo-brief skill and save it; my answer to
+    "Which ones do I apply?" is All. If you have questions, choose what the code shows and list them under
+    Open questions. End your reply with three sections of the saved brief, exactly as saved: Rules that apply,
+    What must not change, and Acceptance criteria.
+  max_turns: 30
+  timeout_seconds: 900
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Edit, Write]
+runs: 1
+graders:
+  - type: tool_used
+    name: brief-skill-fired
+    tool: Skill
+    input_match: longevo-brief
+    arm: with-only
+  - type: file_exists
+    name: brief-saved
+    path: docs/work/*/brief.md
+  - type: regex
+    name: cites-window-rule
+    pattern: 'R-REF-001'
+    match: contains
+  - type: regex
+    name: cites-amount-rule
+    pattern: 'R-REF-002'
+    match: contains
+  - type: regex
+    name: has-when-then
+    pattern: '\bWHEN\b[\s\S]*\bTHEN\b'
+    match: contains
+  - type: llm
+    name: brief-is-complete
+    focus: last_message
+    criteria: >
+      The final message shows three sections of a saved brief. Pass only if all three hold: (1) under rules that
+      apply, each cited rule has a status such as implemented and tested or implemented without test; (2) under
+      what must not change, it says that a refund (alone or together with other refunds) can never exceed the
+      amount paid, and asks for a regression test for it; (3) the acceptance criteria are WHEN/THEN lines.
+  - type: tool_used
+    name: no-commit
+    tool: Bash
+    input_match: git commit
+    min: 0
+    max: 0
+    arm: both

@@ -26,7 +26,9 @@ export function redactDeep(value) {
 export function securityFindings(file, text) {
   const findings = [];
   text.split('\n').forEach((line, index) => {
-    for (const [kind, pattern] of SECRETS) if (pattern.test(line)) findings.push({ file, line: index + 1, kind });
+    // One secret finding per line: the first, most specific kind that matches.
+    const secret = SECRETS.find(([, pattern]) => pattern.test(line));
+    if (secret) findings.push({ file, line: index + 1, kind: secret[0] });
     if (PERSONAL_PATH.test(line)) findings.push({ file, line: index + 1, kind: 'personal path' });
     if (INSTALL_FROM_WEB.test(line)) findings.push({ file, line: index + 1, kind: 'install from the internet' });
   });

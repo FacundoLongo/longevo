@@ -10,6 +10,7 @@ import { IMPORTS_AGENTS, prose } from './instructions.mjs';
 import { listFiles, scope } from './repo.mjs';
 import { collectSources, renderSources, SOURCES_FILE } from './sources.mjs';
 import { addDeclined, removeDeclined } from './state.mjs';
+import { BRIEF } from './work.mjs';
 
 const pad = (n) => String(n).padStart(2, '0');
 export function localDate(date = new Date()) {
@@ -187,12 +188,37 @@ function decline(sc, { keys }) {
   return { op: 'decline', declined: addDeclined(sc, keys) };
 }
 
+const BRIEF_SECTIONS = ['Goal', 'Rules that apply', 'Affected code and docs', 'Golden tests', 'What must not change', 'Open questions', 'Acceptance criteria', 'Tests'];
+
+// Creates docs/work/<date>-<slug>/brief.md with its frontmatter and section headings; the model fills the sections.
+function brief(sc, { slug, task, covers }, { today }) {
+  if (typeof slug !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 80) {
+    throw new Error(`The slug must be kebab case (lowercase letters, numbers and dashes), not ${JSON.stringify(slug)}.`);
+  }
+  if (typeof task !== 'string' || !task.trim() || /\n/.test(task)) throw new Error('task needs one line: the issue link or a short title.');
+  if (!Array.isArray(covers) || covers.length === 0) throw new Error('covers needs at least one glob.');
+  const { files } = listFiles(sc);
+  covers.forEach((glob) => checkGlob(files, glob));
+  const path = inside(sc, `docs/work/${today}-${slug}/brief.md`, { markdown: true });
+  if (existsSync(path)) throw new Error(`${rel(sc, path)} already exists. Pick another slug.`);
+  const title = slug.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
+  const body = setFrontmatter(`# ${title}\n\n${BRIEF_SECTIONS.map((section) => `## ${section}\n`).join('\n')}`, { status: 'open', task, covers });
+  // The task is always quoted: issue keys like #12 would start a YAML comment.
+  return write(sc, 'brief', path, null, body.replace(/^task: .*$/m, () => `task: ${JSON.stringify(task)}`));
+}
+
+function done(sc, { doc }) {
+  const { path, before } = readDoc(sc, doc);
+  if (!BRIEF.test(rel(sc, path))) throw new Error(`${doc} is not a brief in docs/work/.`);
+  return write(sc, 'done', path, before, setFrontmatter(before, { status: 'done' }));
+}
+
 function undecline(sc, { keys = [], all = false }) {
   if (!all && (!Array.isArray(keys) || keys.some((key) => typeof key !== 'string'))) throw new Error('undecline needs a list of keys, or all: true.');
   return { op: 'undecline', declined: removeDeclined(sc, keys, all) };
 }
 
-const OPS = { block, import: importAgents, gemini, frontmatter, verify, checked, sources, coverage, decline, undecline };
+const OPS = { block, import: importAgents, gemini, frontmatter, verify, checked, sources, coverage, decline, undecline, brief, done };
 
 export function apply(op, cwd, input = {}, { today = localDate(), now = new Date() } = {}) {
   if (!Object.hasOwn(OPS, op)) throw new Error(`Unknown apply operation: ${op}. Use ${Object.keys(OPS).join(', ')}.`);

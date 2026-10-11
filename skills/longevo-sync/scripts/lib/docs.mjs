@@ -54,7 +54,7 @@ export function livingDocs(sc, files, generated, { drift = true } = {}) {
       if (LONGEVO_KEY.test(text)) invalid.push({ path, error });
       continue;
     }
-    if (data.covers) {
+    if (data.covers && !RECORD.test(path)) {
       const covers = Array.isArray(data.covers) ? data.covers : [data.covers];
       const anchor = drift && data.verified ? anchorOf(sc, path) : null;
       const changed = anchor ? changedSince(sc, anchor, covers, generated, walks) : [];

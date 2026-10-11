@@ -56,3 +56,24 @@ test('the sync skill asks once, never writes outside the repo and never commits'
   assert.match(skill, /[Nn]ever change code/);
   for (const file of readdirSync(`${skillsRoot}/longevo-sync/references`)) assert.ok(skill.includes(`(references/${file})`), file);
 });
+
+for (const [name, command] of [['longevo-brief', 'context'], ['longevo-review', 'review']]) {
+  test(`${name} asks once, never commits and links its references`, () => {
+    const skill = readFileSync(`${skillsRoot}/${name}/SKILL.md`, 'utf8');
+    assert.match(skill, /Which ones do I apply\? \[All \/ Pick numbers \/ None\]/);
+    assert.match(skill, /[Nn]ever stage or commit/);
+    assert.match(skill, new RegExp(`scripts/longevo\\.mjs ${command} --cwd \\.`));
+    for (const file of readdirSync(`${skillsRoot}/${name}/references`)) assert.ok(skill.includes(`(references/${file})`), file);
+  });
+}
+
+test('the review skill never changes code and uses a fresh reviewer', () => {
+  const skill = readFileSync(`${skillsRoot}/longevo-review/SKILL.md`, 'utf8');
+  assert.match(skill, /[Nn]ever change code/);
+  assert.match(skill, /subagent/);
+});
+
+test('the brief skill never writes to the tracker', () => {
+  const skill = readFileSync(`${skillsRoot}/longevo-brief/SKILL.md`, 'utf8');
+  assert.match(skill, /[Nn]ever write to the (tracker|issue)/);
+});

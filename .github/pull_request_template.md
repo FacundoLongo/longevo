@@ -4,35 +4,46 @@ Plain English, starts with a verb, 15 words or fewer, no prefix.
 Example: Add drift check for docs with missing covers
 -->
 
-## What changed
+## What and why
 
-<!-- One or two sentences. What can people do now, or what works differently? -->
+<!-- One or two sentences: what changes for people who use Longevo, and the problem it solves. Link the issue if there is one: Closes #123 -->
 
-## Why
+## Changes
 
-<!-- The problem this solves. Link the issue if there is one: Closes #123 -->
+<!-- The specific changes, one per line. -->
+
+-
 
 ## Type of change
 
-- [ ] Design or docs
-- [ ] Skill (new or changed)
+- [ ] Skill (new or changed behavior)
+- [ ] Fix
 - [ ] Script
+- [ ] Docs or design
 - [ ] Packaging or install
 - [ ] Repo setup (CI, templates)
 
-## How I checked it
+## How to check it
 
 <!--
-Skill: the repos you ran it on and what changed in the output.
-Script: the command you ran and the result.
-Docs: the links and paths you checked.
+Steps a reviewer can follow. For example:
+1. Run /longevo-init in a repo that has both AGENTS.md and CLAUDE.md.
+2. Check that the report flags the missing @AGENTS.md line.
+Then say what you already ran yourself.
 -->
+
+1.
+
+## Output
+
+<!-- Optional. For skill changes, paste the report, or the generated tests before and after. Delete this section if it does not apply. -->
 
 ## Checklist
 
 - [ ] The title follows the commit rules in [CONTRIBUTING.md](https://github.com/FacundoLongo/longevo/blob/main/CONTRIBUTING.md).
-- [ ] `CHANGELOG.md` has a line under Unreleased, if people who use Longevo will notice the change.
-- [ ] A design change has a record in `docs/decisions/`, and the index is updated.
-- [ ] Docs are updated where this change affects them.
+- [ ] I reviewed my own diff.
+- [ ] Skill changes were tried on a real repo, and evals pass where they exist.
 - [ ] Skills still ask before they write anything.
+- [ ] `CHANGELOG.md` has a line under Unreleased, if people who use Longevo will notice the change.
+- [ ] Docs are updated, and a design change has a decision in `docs/decisions/`.
 - [ ] No secrets, tokens or personal paths.

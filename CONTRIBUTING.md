@@ -33,5 +33,5 @@ When a change is visible to people who use Longevo, add one line under `## [Unre
 ## Docs and design changes
 
 - Large changes start as an issue.
-- An accepted design decision gets a short record in [docs/decisions/](docs/decisions/README.md). Accepted records are not edited: a new record replaces the old one.
+- An accepted design decision goes into its area file in [docs/decisions/](docs/decisions/README.md). Accepted decisions are not edited: a new decision replaces the old one.
 - Before you add a new doc, read [docs/README.md](docs/README.md). It says where each kind of doc goes and how long it can be.

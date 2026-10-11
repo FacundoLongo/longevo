@@ -1,0 +1,21 @@
+name: Idea or design feedback
+description: Suggest a change to the design or ask a question about it.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem do you see?
+      description: Describe the situation. A real example helps the most.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What do you propose?
+      description: Optional. A short idea is enough.
+  - type: input
+    id: section
+    attributes:
+      label: Related section of the design guide
+      placeholder: "For example: Docs layout"

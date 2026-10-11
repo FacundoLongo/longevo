@@ -1,0 +1,10 @@
+# System
+.DS_Store
+
+# Editors
+.idea/
+*.swp
+
+# Local environment
+.env
+.env.*

@@ -22,8 +22,8 @@ It prints JSON and needs Node 18 or newer. If Node is missing, say so and stop. 
 | Mode | When | Go to |
 | --- | --- | --- |
 | Audit | The user says not to change anything ("audit", "only report", "do not touch anything") or passes `--full` | Sections 3 and 4. No list, no writes |
-| Setup | `block.exists` is false, and it is not an audit | Sections 3 to 6 |
-| Session update | `block.exists` is true, and it is not an audit | Section 7 |
+| Setup | `block.exists` is false, `block` is not in `declined`, and it is not an audit | Sections 3 to 6 |
+| Session update | `block.exists` is true or `block` is in `declined`, and it is not an audit | Section 7 |
 
 "Review this repo and tell me what to fix" is a setup, not an audit: it ends with the numbered list and the question.
 
@@ -39,7 +39,7 @@ Follow [references/report.md](references/report.md). Every finding has evidence 
 
 First ask only what the code cannot answer and the list needs, one question at a time, with evidence and options. When the repo answers it (a lockfile, a config file, CI), do not ask: choose, give the evidence in the list item, and let the user leave that item out.
 
-Then show a numbered list of changes. Each item has the file, one line on why, the diff, and a key. Leave out any change whose key is in `declined`. Build the list with [references/apply.md](references/apply.md):
+Then show a numbered list of changes. Each item has the file, one line on why, the diff, and a key. Leave out any change whose key is in `declined`, and if any were left out, say so in one line: "N changes are hidden because you declined them. Say 'show declined' to see them again." When the user says that, run `apply undecline` with `{"all": true}` and scan again. Build the list with [references/apply.md](references/apply.md):
 
 - **Rule moves** for each `rules-not-shared` finding: rules that AGENTS.md does not already have.
 - **`@AGENTS.md`** in CLAUDE.md for `claude-sees-only-claude-md`.

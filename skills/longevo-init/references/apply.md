@@ -20,6 +20,7 @@ JSON
 | `frontmatter` | `doc`, `covers`, `verified` (optional, today by default) | `covers` and `verified` in the doc's frontmatter |
 | `coverage` | none | `docs/coverage.md` |
 | `decline` | `keys` | The keys of changes the user did not pick, inside `.git` |
+| `undecline` | `keys`, or `all: true` | Forgets declined changes, so they can be proposed again |
 
 Each one prints `{"op", "file", "status"}` with `written` or `unchanged`, or `{"error"}` and then writes nothing. Paths and globs are relative to the repo root.
 
@@ -66,7 +67,7 @@ Each one prints `{"op", "file", "status"}` with `written` or `unchanged`, or `{"
 ## Order
 
 1. Prose: rule moves, then `docs/testing.md`.
-2. `frontmatter`, one call per doc, including `docs/testing.md` with `covers` on the test setup (config and helpers), not on the tests.
+2. `frontmatter`, one call per doc. For `docs/testing.md`, `covers` points at the test setup (config and helpers), not at the tests; show that frontmatter in the `testing-doc` item's diff, because it is part of that change.
 3. `block`. List the docs created in this run in `creating`.
 4. `import`, then `gemini`.
 5. `coverage`, last, so it sees the new docs.

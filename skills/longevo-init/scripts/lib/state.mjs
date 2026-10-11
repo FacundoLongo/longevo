@@ -52,3 +52,12 @@ export function addDeclined(sc, keys) {
   writeFileSync(join(dir, 'declined.json'), `${JSON.stringify(list, null, 2)}\n`);
   return list;
 }
+
+export function removeDeclined(sc, keys, all = false) {
+  const dir = stateDir(sc);
+  if (!dir) throw new Error('Declined changes are kept inside .git, and this folder is not a git repo.');
+  const list = all ? [] : declined(sc).filter((key) => !keys.includes(key));
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'declined.json'), `${JSON.stringify(list, null, 2)}\n`);
+  return list;
+}

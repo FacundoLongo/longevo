@@ -67,7 +67,7 @@ The engine (`longevo.mjs apply`) writes the block, the `@AGENTS.md` line, the Ge
 <!-- longevo:end -->
 ```
 
-- At most 12 lines between the markers. Lines are sorted, so the same input always gives the same block. If the triggers do not fit, `init` asks which ones to keep; `docs/coverage.md` still lists every doc.
+- At most 12 lines between the markers. Commands keep the order given and triggers are sorted, so the same input always gives the same block. If the triggers do not fit, `init` asks which ones to keep; `docs/coverage.md` still lists every doc.
 - Every doc it cites exists, and every glob matches at least one file. If not, nothing is written.
 - If there is no block, it goes at the end of AGENTS.md. If there is no AGENTS.md, `init` creates one with only the block.
 - When `init` audits the block, it never makes it longer by itself. A new line comes only from a change you picked.

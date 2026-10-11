@@ -1,5 +1,6 @@
 // Pre-commit hooks and the commands they run: pre-commit, husky, lefthook, lint-staged and a local git hook.
-import { isAbsolute, join, relative, sep } from 'node:path';
+import { realpathSync } from 'node:fs';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { git } from './repo.mjs';
 import { readText } from './text.mjs';
 
@@ -12,6 +13,16 @@ function lintStaged(text) {
     return Object.values(config['lint-staged'] ?? config).flat().filter((command) => typeof command === 'string');
   } catch {
     return [];
+  }
+}
+
+function insideRepo(sc, path) {
+  try {
+    const real = realpathSync(path);
+    const common = resolve(sc.root, (git(sc.root, ['rev-parse', '--git-common-dir']) ?? '.git').trim());
+    return [realpathSync(sc.root), realpathSync(common)].some((dir) => real === dir || real.startsWith(`${dir}${sep}`));
+  } catch {
+    return false;
   }
 }
 
@@ -34,7 +45,8 @@ export function hooks(sc, files) {
   if (sc.isGit) {
     const path = (git(sc.root, ['rev-parse', '--git-path', 'hooks/pre-commit']) ?? '').trim();
     const full = path && (isAbsolute(path) ? path : join(sc.root, path));
-    const text = full ? readText(full) : null;
+    // A hooks folder outside the repo (a global core.hooksPath) is personal setup: never read it.
+    const text = full && insideRepo(sc, full) ? readText(full) : null;
     if (text !== null) found.push({ tool: 'git', file: relative(sc.root, full).split(sep).join('/'), commands: shellLines(text) });
   }
   return found.sort((a, b) => a.tool.localeCompare(b.tool) || a.file.localeCompare(b.file));

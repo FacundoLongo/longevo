@@ -42,7 +42,7 @@ export function gitInput(cwd, args, input) {
       input: input ?? undefined,
       encoding: 'utf8',
       stdio: [input === null ? 'ignore' : 'pipe', 'pipe', 'ignore'],
-      maxBuffer: 64 * 1024 * 1024,
+      maxBuffer: 1024 * 1024 * 1024,
     });
   } catch {
     return null;

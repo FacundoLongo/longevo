@@ -45,7 +45,8 @@ export function renderCoverage({ files, packages, tests, docs, rules = [] }) {
   const codeByArea = new Map();
   for (const file of files.filter((f) => CODE_FILE.test(f) && !isTestFile(f))) {
     const area = areaOf(file, packages);
-    codeByArea.set(area, [...(codeByArea.get(area) ?? []), file]);
+    if (!codeByArea.has(area)) codeByArea.set(area, []);
+    codeByArea.get(area).push(file);
   }
   if (codeByArea.size === 0) {
     out.push('No code files found.');
@@ -69,7 +70,7 @@ export function renderCoverage({ files, packages, tests, docs, rules = [] }) {
 export function coverageFor(sc, files, generated, { docs, rules = findRules(sc, files) } = {}) {
   const clean = files.filter((file) => !isNoise(file, generated));
   const { packages } = workspaces(sc.root, files);
-  const living = docs ?? livingDocs(sc, files, generated).living;
+  const living = docs ?? livingDocs(sc, files, generated, { drift: false }).living;
   return renderCoverage({ files: clean, packages, tests: analyzeTests(sc.root, clean, packages), docs: living, rules });
 }
 

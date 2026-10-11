@@ -3,6 +3,7 @@ const SECRETS = [
   ['github token', /gh[pousr]_[A-Za-z0-9]{36,}/],
   ['api key', /sk-(?:ant-)?[A-Za-z0-9_-]{20,}/],
   ['private key', /-----BEGIN [A-Z ]*PRIVATE KEY-----/],
+  ['key or secret variable', /\b[A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD)[A-Z0-9_]*\s*[:=]\s*["']?[^\s"'`]{8,}["']?/],
   ['password or token value', /(?:password|passwd|secret|token)\s*[:=]\s*["']?[^\s"'`]{8,}/i],
 ];
 const PERSONAL_PATH = /(?:\/Users\/|\/home\/|C:\\Users\\)[\w.-]+/;

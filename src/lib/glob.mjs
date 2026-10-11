@@ -28,10 +28,13 @@ export function globToRegExp(pattern) {
   return new RegExp(`^${out}$`);
 }
 
+const compiled = new Map();
+
 export function matches(file, pattern) {
   const p = pattern.replace(/^\.\//, '').replace(/\/$/, '');
   if (!/[*?]/.test(p)) return file === p || file.startsWith(`${p}/`);
-  return globToRegExp(p).test(file);
+  if (!compiled.has(p)) compiled.set(p, globToRegExp(p));
+  return compiled.get(p).test(file);
 }
 
 export function matchesAny(file, patterns) {

@@ -31,9 +31,16 @@ export function testKind(file) {
 const GROUPING = new Set(['packages', 'apps', 'services', 'internal', 'cmd', 'src', 'libs']);
 
 // The area of a file: the deepest workspace package that holds it, or a guess from its first folders.
+const packageSets = new WeakMap();
+
 export function areaOf(file, packages = []) {
-  const owner = packages.filter((pkg) => file.startsWith(`${pkg}/`)).sort((a, b) => b.length - a.length)[0];
-  if (owner) return owner;
+  if (packages.length) {
+    if (!packageSets.has(packages)) packageSets.set(packages, new Set(packages));
+    const set = packageSets.get(packages);
+    for (let dir = file.slice(0, file.lastIndexOf('/')); dir; dir = dir.includes('/') ? dir.slice(0, dir.lastIndexOf('/')) : '') {
+      if (set.has(dir)) return dir;
+    }
+  }
   const parts = file.split('/');
   if (parts.length === 1) return '.';
   if (GROUPING.has(parts[0]) && parts.length > 2) return `${parts[0]}/${parts[1]}`;

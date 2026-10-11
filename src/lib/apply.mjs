@@ -1,6 +1,6 @@
 // Writes the structured changes the user picked (D7). Every input is checked before anything is written.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative, sep } from 'node:path';
+import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { dirname, isAbsolute, join, relative, sep } from 'node:path';
 import { generatedFiles } from './attributes.mjs';
 import { MAX_BLOCK_LINES, readBlock, renderBlock, writeBlock } from './block.mjs';
 import { coverageFor, COVERAGE_FILE } from './coverage.mjs';
@@ -9,7 +9,7 @@ import { matches } from './glob.mjs';
 import { IMPORTS_AGENTS, prose } from './instructions.mjs';
 import { listFiles, scope } from './repo.mjs';
 import { collectSources, renderSources, SOURCES_FILE } from './sources.mjs';
-import { addDeclined } from './state.mjs';
+import { addDeclined, removeDeclined } from './state.mjs';
 
 const pad = (n) => String(n).padStart(2, '0');
 export function localDate(date = new Date()) {
@@ -31,6 +31,30 @@ const readOrNull = (path) => {
   }
 };
 const rel = (sc, path) => relative(sc.root, path).split(sep).join('/');
+const DATE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?$/;
+
+// Every path in an input must stay inside the repo, out of .git, and (once links are followed) under the root.
+function inside(sc, path, { base = sc.root, markdown = false } = {}) {
+  if (typeof path !== 'string' || !path.trim() || isAbsolute(path) || path.split(/[\\/]/).includes('..')) {
+    throw new Error(`${path} must be a path inside the repo.`);
+  }
+  const clean = path.replace(/\\/g, '/').replace(/^\.\//, '');
+  if (/(^|\/)\.git(\/|$)/.test(clean)) throw new Error(`${path} is inside .git; Longevo never writes there.`);
+  if (markdown && !/\.mdx?$/.test(clean)) throw new Error(`${path} is not a Markdown file.`);
+  const full = join(base, clean);
+  if (existsSync(full)) {
+    const root = realpathSync(sc.root);
+    const real = realpathSync(full);
+    if (real !== root && !real.startsWith(`${root}${sep}`)) throw new Error(`${path} points outside the repo.`);
+  }
+  return full;
+}
+
+function checkDate(value) {
+  if (value !== undefined && !(typeof value === 'string' && DATE.test(value))) throw new Error(`verified must be a date like YYYY-MM-DD, not ${JSON.stringify(value)}.`);
+}
+
+const plain = (text) => typeof text === 'string' && !/[`\n]/.test(text);
 
 function write(sc, op, path, before, after, extra = {}) {
   const file = rel(sc, path);
@@ -46,13 +70,16 @@ function checkGlob(files, glob) {
 
 function block(sc, input) {
   const { commands = [], triggers = [], testingDoc = false, coverageDoc = false, creating = [] } = input;
-  const exists = (doc) => existsSync(join(sc.root, doc)) || creating.includes(doc);
+  if (!Array.isArray(creating)) throw new Error('creating must be a list of paths.');
+  creating.forEach((path) => inside(sc, path));
+  const exists = (doc) => existsSync(inside(sc, doc, { markdown: true })) || creating.includes(doc);
   for (const { label, command } of commands) {
     if (typeof label !== 'string' || typeof command !== 'string' || !label.trim() || !command.trim()) throw new Error('Each command needs a label and a command.');
     if (/[`\n]/.test(label + command)) throw new Error('Commands and labels cannot contain backticks or new lines.');
   }
   const { files } = listFiles(sc);
   for (const { glob, doc } of triggers) {
+    if (!plain(glob) || !plain(doc)) throw new Error('Trigger globs and docs cannot contain backticks or new lines.');
     if (!exists(doc)) throw new Error(`${doc} does not exist.`);
     checkGlob(files, glob);
   }
@@ -68,8 +95,13 @@ function block(sc, input) {
 }
 
 function importAgents(sc, { file }) {
-  const path = (file ? [file] : ['CLAUDE.md', '.claude/CLAUDE.md']).map((f) => join(sc.cwd, f)).find((p) => existsSync(p));
+  const candidates = (file !== undefined ? [file] : ['CLAUDE.md', '.claude/CLAUDE.md']).map((f) => inside(sc, f, { base: sc.cwd }));
+  if (file !== undefined && !/(^|\/)CLAUDE\.md$/.test(String(file))) throw new Error(`${file} is not a CLAUDE.md file.`);
+  const path = candidates.find((p) => existsSync(p));
   if (!path) throw new Error('There is no CLAUDE.md here, so there is nothing to import into. Longevo does not create one.');
+  if (lstatSync(path).isSymbolicLink()) {
+    throw new Error(`${rel(sc, path)} is a link to ${relative(dirname(path), realpathSync(path))}, so Claude Code already reads that file. Nothing to import.`);
+  }
   const before = readFileSync(path, 'utf8');
   if (IMPORTS_AGENTS.test(prose(before))) return write(sc, 'import', path, before, before);
   const line = rel(sc, path).endsWith('.claude/CLAUDE.md') ? '@../AGENTS.md' : '@AGENTS.md';
@@ -87,6 +119,11 @@ function gemini(sc) {
       throw new Error('.gemini/settings.json is not plain JSON (it may have comments). Add "AGENTS.md" to context.fileName by hand.');
     }
   }
+  const byHand = 'Add "AGENTS.md" to context.fileName in .gemini/settings.json by hand.';
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) throw new Error(`.gemini/settings.json is not a JSON object. ${byHand}`);
+  if (settings.context !== undefined && (!settings.context || typeof settings.context !== 'object' || Array.isArray(settings.context))) {
+    throw new Error(`context in .gemini/settings.json is not an object. ${byHand}`);
+  }
   const current = settings.context?.fileName;
   const has = current === 'AGENTS.md' || (Array.isArray(current) && current.includes('AGENTS.md'));
   if (has) return write(sc, 'gemini', path, before, before);
@@ -96,7 +133,8 @@ function gemini(sc) {
 }
 
 function frontmatter(sc, { doc, covers, verified }, { today }) {
-  if (typeof doc !== 'string' || !existsSync(join(sc.root, doc))) throw new Error(`${doc} does not exist.`);
+  checkDate(verified);
+  if (!existsSync(inside(sc, doc, { markdown: true }))) throw new Error(`${doc} does not exist.`);
   if (!Array.isArray(covers) || covers.length === 0) throw new Error('covers needs at least one glob.');
   const { files } = listFiles(sc);
   covers.forEach((glob) => checkGlob(files, glob));
@@ -106,8 +144,8 @@ function frontmatter(sc, { doc, covers, verified }, { today }) {
 }
 
 function readDoc(sc, doc) {
-  if (typeof doc !== 'string' || !existsSync(join(sc.root, doc))) throw new Error(`${doc} does not exist.`);
-  const path = join(sc.root, doc);
+  const path = inside(sc, doc, { markdown: true });
+  if (!existsSync(path)) throw new Error(`${doc} does not exist.`);
   const before = readFileSync(path, 'utf8');
   const parsed = parseFrontmatter(before);
   if (parsed.error) throw new Error(`${doc}: ${parsed.error}`);
@@ -116,6 +154,7 @@ function readDoc(sc, doc) {
 
 // The doc is still true: only its verified date changes.
 function verify(sc, { doc, verified }, { today, now }) {
+  checkDate(verified);
   const { path, before, data } = readDoc(sc, doc);
   if (!data.covers) throw new Error(`${doc} has no covers, so it is not a living doc.`);
   return write(sc, 'verify', path, before, setFrontmatter(before, { verified: nextVerified(data.verified, verified ?? today, now) }));
@@ -123,6 +162,7 @@ function verify(sc, { doc, verified }, { today, now }) {
 
 // A source was read and the doc still matches it: only that source's checked date changes.
 function checked(sc, { doc, url, checked: date }, { today }) {
+  checkDate(date);
   const { path, before, data } = readDoc(sc, doc);
   const sources = (Array.isArray(data.sources) ? data.sources : []).map((s) => (typeof s === 'string' ? { url: s } : s));
   if (!sources.some((s) => s.url === url)) throw new Error(`${doc} does not cite ${url}.`);
@@ -147,7 +187,12 @@ function decline(sc, { keys }) {
   return { op: 'decline', declined: addDeclined(sc, keys) };
 }
 
-const OPS = { block, import: importAgents, gemini, frontmatter, verify, checked, sources, coverage, decline };
+function undecline(sc, { keys = [], all = false }) {
+  if (!all && (!Array.isArray(keys) || keys.some((key) => typeof key !== 'string'))) throw new Error('undecline needs a list of keys, or all: true.');
+  return { op: 'undecline', declined: removeDeclined(sc, keys, all) };
+}
+
+const OPS = { block, import: importAgents, gemini, frontmatter, verify, checked, sources, coverage, decline, undecline };
 
 export function apply(op, cwd, input = {}, { today = localDate(), now = new Date() } = {}) {
   if (!Object.hasOwn(OPS, op)) throw new Error(`Unknown apply operation: ${op}. Use ${Object.keys(OPS).join(', ')}.`);

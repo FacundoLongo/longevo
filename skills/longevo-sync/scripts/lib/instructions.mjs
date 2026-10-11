@@ -1,4 +1,4 @@
-import { statSync } from 'node:fs';
+import { lstatSync, realpathSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { git } from './repo.mjs';
 
@@ -59,11 +59,11 @@ export function inventory(sc, files, texts) {
   }));
 }
 
-export function whoLoads(dirs, files, texts, { geminiFiles = ['GEMINI.md'] } = {}) {
+export function whoLoads(dirs, files, texts, { geminiFiles = ['GEMINI.md'], aliases = new Set() } = {}) {
   const inChain = (name) => files.filter((file) => base(file) === name && dirs.includes(ownerDir(file)));
   const claudeFiles = [...inChain('CLAUDE.md'), ...inChain('CLAUDE.local.md')];
   const agentsFiles = inChain('AGENTS.md');
-  const importsAgents = claudeFiles.some((file) => IMPORTS_AGENTS.test(prose(texts[file] ?? '')));
+  const importsAgents = claudeFiles.some((file) => aliases.has(file) || IMPORTS_AGENTS.test(prose(texts[file] ?? '')));
   const claude = claudeFiles.length ? [...claudeFiles, ...(importsAgents ? agentsFiles : [])] : agentsFiles;
   const codex = dirs.flatMap((dir) => {
     const prefix = dir ? `${dir}/` : '';
@@ -126,10 +126,10 @@ function hasOwnRules(text = '') {
 }
 
 // Instruction files in the chain that some agent in use does not load.
-export function unsharedRules(dirs, inv, texts, loads, inUse) {
+export function unsharedRules(dirs, inv, texts, loads, inUse, aliases = new Set()) {
   const findings = [];
   for (const { path } of inv) {
-    if (base(path) === 'CLAUDE.local.md' || !dirs.includes(ownerDir(path)) || !hasOwnRules(texts[path])) continue;
+    if (base(path) === 'CLAUDE.local.md' || aliases.has(path) || !dirs.includes(ownerDir(path)) || !hasOwnRules(texts[path])) continue;
     const missing = inUse.filter((agent) => !loads[agent].includes(path));
     if (missing.length) {
       findings.push({
@@ -142,4 +142,23 @@ export function unsharedRules(dirs, inv, texts, loads, inUse) {
     }
   }
   return findings;
+}
+
+// Instruction files that are links to another instruction file, like CLAUDE.md -> AGENTS.md: one text for every agent.
+export function linkedFiles(root, files) {
+  const real = (file) => {
+    try {
+      return realpathSync(join(root, file));
+    } catch {
+      return null;
+    }
+  };
+  const targets = new Map(files.map((file) => [file, real(file)]));
+  return new Set(files.filter((file) => {
+    try {
+      return lstatSync(join(root, file)).isSymbolicLink() && files.some((other) => other !== file && targets.get(other) === targets.get(file));
+    } catch {
+      return false;
+    }
+  }));
 }

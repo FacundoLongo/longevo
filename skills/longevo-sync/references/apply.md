@@ -20,6 +20,7 @@ JSON
 | `sources` | none | `docs/sources.md` |
 | `coverage` | none | `docs/coverage.md` |
 | `decline` | `keys` | The keys of changes the user did not pick, inside `.git` |
+| `undecline` | `keys`, or `all: true` | Forgets declined changes, so they can be proposed again |
 
 Each one prints `{"op", "file", "status"}` with `written` or `unchanged`, or `{"error"}` and then writes nothing.
 

@@ -10,7 +10,7 @@ import { coverageFor, coverageState } from './lib/coverage.mjs';
 import { docFindings, livingDocs } from './lib/docs.mjs';
 import { hooks as findHooks } from './lib/hooks.mjs';
 import { hotspots } from './lib/hotspots.mjs';
-import { findInstructionFiles, instructionFindings, inventory, unsharedRules, whoLoads } from './lib/instructions.mjs';
+import { findInstructionFiles, instructionFindings, inventory, linkedFiles, unsharedRules, whoLoads } from './lib/instructions.mjs';
 import { citedPaths, missingPaths } from './lib/paths.mjs';
 import { chain, listFiles, scope } from './lib/repo.mjs';
 import { redactDeep, securityFindings } from './lib/security.mjs';
@@ -39,7 +39,8 @@ export function scan(cwd, { markSession = false, home = homedir() } = {}) {
   const instructionFiles = findInstructionFiles(files, dirs);
   const texts = Object.fromEntries(instructionFiles.map((file) => [file, readText(join(sc.root, file)) ?? '']));
   const instructionInventory = inventory(sc, instructionFiles, texts);
-  const loads = whoLoads(dirs, instructionFiles, texts, { geminiFiles: geminiFiles(sc, home) });
+  const aliases = linkedFiles(sc.root, instructionFiles);
+  const loads = whoLoads(dirs, instructionFiles, texts, { geminiFiles: geminiFiles(sc, home), aliases });
 
   const inUse = agentsInUse(sc, files, home);
   const mcp = mcpServers(sc, home);
@@ -75,7 +76,7 @@ export function scan(cwd, { markSession = false, home = homedir() } = {}) {
     coverage: coverageState(sc.root, coverageFor(sc, files, generated, { docs: docs.living })),
     findings: [
       ...instructionFindings(instructionInventory, loads),
-      ...unsharedRules(dirs, instructionInventory, texts, loads, inUse.length ? inUse : AGENTS),
+      ...unsharedRules(dirs, instructionInventory, texts, loads, inUse.length ? inUse : AGENTS, aliases),
       ...skillFindings(inUse, skills),
       ...commandFindings(cited, real),
       ...docFindings(docs),

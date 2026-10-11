@@ -28,16 +28,20 @@ function anchorOf(sc, doc) {
 }
 
 // Files matching `covers` in commits after the anchor, without noise and big reformat commits.
-export function changedSince(sc, anchor, covers, generated) {
-  const changed = new Set();
-  for (const commit of commitsSince(sc, { range: `${anchor}..HEAD` })) {
-    if (commit.files.length > MAX_COMMIT_FILES) continue;
-    for (const file of commit.files) if (!isNoise(file, generated) && matchesAny(file, covers)) changed.add(file);
+// Docs verified in the same commit share one walk of the history after it.
+export function changedSince(sc, anchor, covers, generated, walks = new Map()) {
+  if (!walks.has(anchor)) {
+    walks.set(anchor, commitsSince(sc, { range: `${anchor}..HEAD` })
+      .map((commit) => commit.files.filter((file) => !isNoise(file, generated)))
+      .filter((files) => files.length <= MAX_COMMIT_FILES));
   }
+  const changed = new Set();
+  for (const files of walks.get(anchor)) for (const file of files) if (matchesAny(file, covers)) changed.add(file);
   return [...changed].sort();
 }
 
-export function livingDocs(sc, files, generated) {
+export function livingDocs(sc, files, generated, { drift = true } = {}) {
+  const walks = new Map();
   const living = [];
   const invalid = [];
   const candidates = [];
@@ -52,8 +56,8 @@ export function livingDocs(sc, files, generated) {
     }
     if (data.covers) {
       const covers = Array.isArray(data.covers) ? data.covers : [data.covers];
-      const anchor = data.verified ? anchorOf(sc, path) : null;
-      const changed = anchor ? changedSince(sc, anchor, covers, generated) : [];
+      const anchor = drift && data.verified ? anchorOf(sc, path) : null;
+      const changed = anchor ? changedSince(sc, anchor, covers, generated, walks) : [];
       const unmatched = covers.filter((pattern) => !files.some((file) => matches(file, pattern)));
       living.push({ path, covers, verified: data.verified ?? null, anchor, stale: changed.length > 0, changed, unmatched });
     } else if (/(^|\/)docs\//.test(path) && !RECORD.test(path) && !GENERATED_DOC.test(path) && !/(^|\/)CHANGELOG/i.test(path)) {

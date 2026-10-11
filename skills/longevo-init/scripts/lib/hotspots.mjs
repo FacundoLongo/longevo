@@ -22,10 +22,9 @@ export function hotspots(sc, files, packages, { limit = 10, generated = generate
   const existing = new Set(files);
   const counts = new Map();
   for (const commit of commitsSince(sc, { since: '12.months' })) {
-    if (commit.files.length > MAX_COMMIT_FILES) continue;
-    for (const file of new Set(commit.files)) {
-      if (existing.has(file) && !isNoise(file, generated)) counts.set(file, (counts.get(file) ?? 0) + 1);
-    }
+    const real = [...new Set(commit.files)].filter((file) => !isNoise(file, generated));
+    if (real.length > MAX_COMMIT_FILES) continue;
+    for (const file of real) if (existing.has(file)) counts.set(file, (counts.get(file) ?? 0) + 1);
   }
   const ranked = [...counts].map(([file, commits]) => ({ file, commits })).sort((a, b) => b.commits - a.commits || a.file.localeCompare(b.file));
   const byArea = new Map();

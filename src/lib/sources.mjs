@@ -32,15 +32,17 @@ export function collectSources(sc, files) {
   return [...byUrl.values()].sort((a, b) => byText(a.url, b.url));
 }
 
+const readable = (date) => typeof date === 'string' && /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?$/.test(date) && !Number.isNaN(Date.parse(`${date.slice(0, 10)}T00:00:00Z`));
+
 export function sourceFindings(sources, today) {
   return sources
-    .filter((source) => source.checked === null || daysBetween(source.checked, today) > SOURCE_MAX_AGE_DAYS)
+    .filter((source) => !readable(source.checked) || daysBetween(source.checked.slice(0, 10), today) > SOURCE_MAX_AGE_DAYS)
     .map((source) => ({
       id: 'source-not-checked',
       severity: 'medium',
       evidence: [source.url],
       docs: source.citedBy,
-      message: source.checked ? `${source.url} was last checked on ${source.checked}.` : `${source.url} has no checked date.`,
+      message: readable(source.checked) ? `${source.url} was last checked on ${source.checked}.` : `${source.url} has no checked date Longevo can read.`,
     }));
 }
 

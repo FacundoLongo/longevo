@@ -13,7 +13,7 @@ Check the docs against the code and the external sources, and fix what drifted w
 node <this skill's folder>/scripts/longevo.mjs sync --cwd .
 ```
 
-It prints JSON and needs Node 18 or newer. Read only what it points to. If `docs` is empty, say that the repo has no living docs yet, suggest `longevo-init` to add frontmatter, and stop.
+It prints JSON and needs Node 18 or newer. Read only what it points to; the decisions come first (`findings`, `declined`, `coverage`, `sourcesFile`) and the diffs come last. If `docs`, `rules`, `sources` and `briefs.done` are all empty, say that there is nothing to check yet, suggest `longevo-init` to add frontmatter, and stop.
 
 If the user asks only for a report, do sections 2 to 5 without the list.
 
@@ -34,7 +34,7 @@ For each finding on a rule (`rule-code-missing`, `rule-code-moved`, `rule-test-m
 
 ## 4. Sources
 
-For each `source-not-checked` finding, follow [references/sources.md](references/sources.md): read the source only through an MCP tool the agent has, never write to it, and compare it with the rules that cite it. Unchanged: propose a new `checked` date. Changed: propose rule diffs and ask the user which side is right. No tool for it: list it under "Not checked". If a doc links to a page that is not in any `sources`, ask "Is <link> a source for <doc>? [Yes / No]".
+For each `source-not-checked` finding, follow [references/sources.md](references/sources.md): read the source only through an MCP tool the agent has, never write to it, and compare it with the rules that cite it. Unchanged: propose a new `checked` date. Changed: propose rule diffs and ask the user which side is right. No tool for it: list it under "Not checked". If a doc links to a Notion, Confluence, Jira, Linear or GitHub issue page that is not in any `sources`, ask "Is <link> a source for <doc>? [Yes / No]". Other links, like articles, are not sources.
 
 ## 5. Briefs marked done
 
@@ -42,7 +42,7 @@ For each brief in `briefs.done`, propose its acceptance criteria as rules in `do
 
 ## 6. Ask, then propose
 
-Ask only what the code and the sources cannot answer, one question at a time, with evidence and options. Then show a numbered list of changes, each with the file, one line on why, the diff and a key ([references/apply.md](references/apply.md)). Leave out any change whose key is in `declined`. Add `docs/sources.md` when `sources` is not empty and `sourcesFile.upToDate` is false. Add `docs/coverage.md` when it exists and `coverage.upToDate` is false; creating it is the job of `longevo-init`. End with this question, and nothing after it:
+Ask only what the code and the sources cannot answer, one question at a time, with evidence and options. Then show a numbered list of changes, each with the file, one line on why, the diff and a key ([references/apply.md](references/apply.md)). Leave out any change whose key is in `declined`, and if any were left out, say so in one line: "N changes are hidden because you declined them. Say 'show declined' to see them again." When the user says that, run `apply undecline` with `{"all": true}` and run the sync report again. Add `docs/sources.md` when `sources` is not empty and `sourcesFile.upToDate` is false. Add `docs/coverage.md` when it exists and `coverage.upToDate` is false; creating it is the job of `longevo-init`. End with this question, and nothing after it:
 
 > Which ones do I apply? [All / Pick numbers / None]
 

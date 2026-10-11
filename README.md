@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-111111?style=flat-square"></a>
-  <img alt="Status: preview 0.1" src="https://img.shields.io/badge/status-preview%200.1-111111?style=flat-square">
+  <img alt="Status: preview 0.2" src="https://img.shields.io/badge/status-preview%200.2-111111?style=flat-square">
   <a href="https://agentskills.io/specification"><img alt="Format: Agent Skills" src="https://img.shields.io/badge/format-Agent%20Skills-111111?style=flat-square"></a>
 </p>
 
@@ -22,7 +22,7 @@
 Longevo is a small set of agent skills. It helps coding agents write tests that catch real bugs, and it keeps your docs true to the code.
 
 > [!NOTE]
-> Longevo is a preview. `longevo-init`, `longevo-sync` and `longevo-testing` work today; `brief` and `review` are being built for 0.2. See the [roadmap](docs/roadmap.md).
+> Longevo 0.2 is a preview: all five commands work, and each one passed its eval gate. 1.0 comes after use on real repos and in all five agents. See the [roadmap](docs/roadmap.md).
 
 ## Why
 
@@ -36,7 +36,7 @@ Longevo does not replace your agent or your workflow. It improves what the agent
 
 ## Commands
 
-| Command | What it does | In 0.1 |
+| Command | What it does | In 0.2 |
 | --- | --- | --- |
 | `/longevo-init` | The first time: reviews the repo and its AGENTS.md, and applies the changes you pick so every agent sees the same rules. Every session after that: a short update. | Yes |
 | `longevo-testing` | Runs by itself when the agent writes tests. Based on [Primo's testing skill](https://github.com/primo-devs/public-skills). | Yes |

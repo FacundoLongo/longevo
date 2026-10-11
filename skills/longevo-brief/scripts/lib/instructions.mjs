@@ -59,11 +59,12 @@ export function inventory(sc, files, texts) {
   }));
 }
 
-export function whoLoads(dirs, files, texts, { geminiFiles = ['GEMINI.md'], aliases = new Set() } = {}) {
+export function whoLoads(dirs, files, texts, { geminiFiles = ['GEMINI.md'], aliases = new Map() } = {}) {
   const inChain = (name) => files.filter((file) => base(file) === name && dirs.includes(ownerDir(file)));
   const claudeFiles = [...inChain('CLAUDE.md'), ...inChain('CLAUDE.local.md')];
   const agentsFiles = inChain('AGENTS.md');
-  const importsAgents = claudeFiles.some((file) => aliases.has(file) || IMPORTS_AGENTS.test(prose(texts[file] ?? '')));
+  const sameAsAgents = (file) => (aliases.get(file) ?? []).some((member) => base(member) === 'AGENTS.md');
+  const importsAgents = claudeFiles.some((file) => sameAsAgents(file) || IMPORTS_AGENTS.test(prose(texts[file] ?? '')));
   const claude = claudeFiles.length ? [...claudeFiles, ...(importsAgents ? agentsFiles : [])] : agentsFiles;
   const codex = dirs.flatMap((dir) => {
     const prefix = dir ? `${dir}/` : '';
@@ -126,11 +127,15 @@ function hasOwnRules(text = '') {
 }
 
 // Instruction files in the chain that some agent in use does not load.
-export function unsharedRules(dirs, inv, texts, loads, inUse, aliases = new Set()) {
+export function unsharedRules(dirs, inv, texts, loads, inUse, aliases = new Map()) {
   const findings = [];
+  const reported = new Set();
   for (const { path } of inv) {
-    if (base(path) === 'CLAUDE.local.md' || aliases.has(path) || !dirs.includes(ownerDir(path)) || !hasOwnRules(texts[path])) continue;
-    const missing = inUse.filter((agent) => !loads[agent].includes(path));
+    if (base(path) === 'CLAUDE.local.md' || reported.has(path) || !dirs.includes(ownerDir(path)) || !hasOwnRules(texts[path])) continue;
+    // Files that are the same file on disk count once: an agent that loads any of them sees the rules.
+    const members = aliases.get(path) ?? [path];
+    members.forEach((member) => reported.add(member));
+    const missing = inUse.filter((agent) => !members.some((member) => loads[agent].includes(member)));
     if (missing.length) {
       findings.push({
         id: 'rules-not-shared',
@@ -144,7 +149,8 @@ export function unsharedRules(dirs, inv, texts, loads, inUse, aliases = new Set(
   return findings;
 }
 
-// Instruction files that are links to another instruction file, like CLAUDE.md -> AGENTS.md: one text for every agent.
+// Instruction files that are the same file on disk (CLAUDE.md -> AGENTS.md, or the other way): one text for
+// every agent. Returns each such file with the files it shares its real path with.
 export function linkedFiles(root, files) {
   const real = (file) => {
     try {
@@ -153,12 +159,12 @@ export function linkedFiles(root, files) {
       return null;
     }
   };
-  const targets = new Map(files.map((file) => [file, real(file)]));
-  return new Set(files.filter((file) => {
-    try {
-      return lstatSync(join(root, file)).isSymbolicLink() && files.some((other) => other !== file && targets.get(other) === targets.get(file));
-    } catch {
-      return false;
-    }
-  }));
+  const byReal = new Map();
+  for (const file of files) {
+    const target = real(file);
+    if (target) byReal.set(target, [...(byReal.get(target) ?? []), file]);
+  }
+  const groups = new Map();
+  for (const members of byReal.values()) if (members.length > 1) for (const file of members) groups.set(file, members);
+  return groups;
 }

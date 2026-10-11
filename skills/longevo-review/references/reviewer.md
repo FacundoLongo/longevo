@@ -19,6 +19,7 @@ Find, with evidence:
 
 Rules:
 - Every finding has file:line in the diff and one sentence of evidence.
+- For a secret, give file:line only. Never quote it.
 - Severity: high (a rule broken, data lost, a criterion not met), medium (a weak or missing test, a stale doc),
   low (clarity).
 - Do not report style, formatting or naming that a linter covers.

@@ -13,19 +13,19 @@ Give the change a second look from a reviewer that did not write it. Report what
 node <this skill's folder>/scripts/longevo.mjs review --cwd .
 ```
 
-Add `--base <branch or commit>` when the user names one. If `nothing` is true, say there is nothing to review and stop.
+Add `--base <branch or commit>` when the user names one; the review starts where the branch split from it. If `base.fallback` is set, say why before anything else: `no-merge-base` means a shallow clone or unrelated history (suggest `git fetch --unshallow` or `--base`), and `no-default-branch` means the user should pass `--base`. If `nothing` is true, say there is nothing to review and stop.
 
 ## 2. Build the packet
 
 The reviewer gets only:
 
-- the diff: `git diff <base.commit>`, and the content of each untracked file in `changed`;
+- the diff: run `diffCommand` (it leaves out generated files, vendored files and lockfiles), and the content of each untracked file in `changed` that is not `skipped`;
 - the rules in `rules`;
 - `docs/testing.md`;
 - the brief in `brief` (its acceptance criteria and "What must not change");
 - the docs in `docsToUpdate`.
 
-Nothing else from this conversation, and nothing about how the code was written. If git does not run here, read the changed files listed in `changed` instead of the diff.
+Before you send it, replace every line listed in `security` with `[redacted]`. Nothing else from this conversation, and nothing about how the code was written. If `diffLines.added` is over 3000, do not paste the diff: give the reviewer `diffCommand` and the list of files, and ask it to read them one at a time.
 
 ## 3. Send it to a fresh reviewer
 
@@ -51,7 +51,15 @@ Each item has the file, one line on why, the diff and a key (`diff:<doc>:<first 
 
 > Which ones do I apply? [All / Pick numbers / None]
 
-Apply only the picked items: prose with your edit tool, `verify` and `done` with `longevo.mjs apply` (input as JSON on stdin in a heredoc). Run `apply decline` for the rest. Then show `git diff --stat`. Never stage or commit.
+Apply only the picked items: prose with your edit tool, `verify` and `done` with `longevo.mjs apply` and the doc as JSON on stdin:
+
+```bash
+node <this skill's folder>/scripts/longevo.mjs apply verify --cwd . <<'JSON'
+{"doc": "docs/domain/refunds.md"}
+JSON
+```
+
+Run `apply decline` for the rest. Then show `git diff --stat`. Never stage or commit.
 
 ## Rules
 

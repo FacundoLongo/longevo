@@ -29,6 +29,9 @@ const binary = () => {
   return resolved;
 };
 
+// The git that runs here, for commands the agent runs itself.
+export const gitCommand = () => binary() ?? 'git';
+
 export function git(cwd, args) {
   return gitInput(cwd, args, null);
 }

@@ -20,10 +20,12 @@ const dirOf = (file) => (file.includes('/') ? file.slice(0, file.lastIndexOf('/'
 const stem = (file) => file.split('/').pop().replace(/\.[^.]+$/, '').replace(/[._-](test|spec)$/i, '').replace(/^test_/i, '').replace(/_test$/i, '').replace(/Tests?$|IT$/, '').toLowerCase();
 
 // Backticked paths in the "Golden tests" section of docs/testing.md.
-export function goldenTests(root) {
+export function goldenTests(root, files = null) {
   const text = readText(join(root, 'docs', 'testing.md')) ?? '';
   const section = text.split(/^## /m).find((part) => /^Golden tests\b/i.test(part)) ?? '';
-  return [...section.matchAll(/`([^`\s]+)`/g)].map((match) => match[1]);
+  // Only paths: a test name or a helper like `makeRepo` in the same bullet is not a golden test.
+  const names = [...section.matchAll(/`([^`\s]+)`/g)].map((match) => match[1]).filter((name) => name.includes('/') || /\.[a-z]{1,5}$/i.test(name));
+  return files ? names.filter((name) => files.includes(name) && isTestFile(name)) : names;
 }
 
 export function contextReport(cwd, { paths = [] } = {}) {
@@ -43,8 +45,15 @@ export function contextReport(cwd, { paths = [] } = {}) {
 
   const stems = new Set(targets.filter((file) => !isTestFile(file)).map(stem));
   const dirs = new Set(targets.map(dirOf));
-  const near = files.filter((file) => isTestFile(file) && (stems.has(stem(file)) || dirs.has(dirOf(file)))).slice(0, MAX_NEAR);
   const areas = [...new Set(targets.map((file) => areaOf(file, packages)))];
+  // Same folder first, then the same area, then other files with the same name, and only then the limit.
+  const rank = (file) => (dirs.has(dirOf(file)) ? 0 : areas.includes(areaOf(file, packages)) ? 1 : 2);
+  const near = files
+    .filter((file) => isTestFile(file) && (stems.has(stem(file)) || dirs.has(dirOf(file))))
+    .map((file, index) => ({ file, index, rank: rank(file) }))
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .slice(0, MAX_NEAR)
+    .map((entry) => entry.file);
   const area = {};
   for (const file of files.filter(isTestFile)) {
     const owner = areaOf(file, packages);
@@ -59,7 +68,7 @@ export function contextReport(cwd, { paths = [] } = {}) {
     docs,
     rules,
     tests: { near: analyzeTests(sc.root, near, packages).map(({ file, kind, mocksStorage }) => ({ file, kind, mocksStorage })), area },
-    golden: goldenTests(sc.root),
+    golden: goldenTests(sc.root, files),
     coverage,
     hotspots: hotspots(sc, files, packages, { generated }).files.filter((hot) => touches(hot.file)),
     briefs: briefs(sc, files).filter((brief) => brief.status !== 'done' && targets.some((file) => matchesAny(file, brief.covers))).map(({ path, status, task }) => ({ path, status, task })),

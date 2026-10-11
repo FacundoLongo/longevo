@@ -28,12 +28,14 @@ Each one prints `{"op", "file", "status"}` with `written` or `unchanged`, or `{"
 
 | Change | Key |
 | --- | --- |
-| New verified date | `verify:<doc>` |
+| New verified date | `verify:<doc>:<first 12 characters of the newest commit in its commits>` |
 | Text diff in a doc | `diff:<doc>:<first 40 characters of the changed line>` |
-| Rule change or new rule | `rule:<id>` |
-| New checked date | `checked:<doc>:<url>` |
+| Rule change or new rule | `rule:<id>:<first 12 characters of the newest commit in its doc's commits, or none>` |
+| New checked date | `checked:<doc>:<url>:<this month, YYYY-MM>` |
 | Sources file | `sources` |
 | Coverage record | `coverage` |
+
+Keys name the newest change under the doc, or the month for sources, so a decline lasts only until the code changes again or the month ends.
 
 ## Order
 

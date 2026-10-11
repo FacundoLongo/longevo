@@ -1,13 +1,13 @@
 // Writes the structured changes the user picked (D7). Every input is checked before anything is written.
-import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, join, relative, sep } from 'node:path';
+import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, realpathSync, writeFileSync } from 'node:fs';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { generatedFiles } from './attributes.mjs';
 import { MAX_BLOCK_LINES, readBlock, renderBlock, writeBlock } from './block.mjs';
 import { coverageFor, COVERAGE_FILE } from './coverage.mjs';
 import { parseFrontmatter, setFrontmatter } from './frontmatter.mjs';
 import { matches } from './glob.mjs';
 import { IMPORTS_AGENTS, prose } from './instructions.mjs';
-import { listFiles, scope } from './repo.mjs';
+import { git, listFiles, scope } from './repo.mjs';
 import { collectSources, renderSources, SOURCES_FILE } from './sources.mjs';
 import { addDeclined, removeDeclined } from './state.mjs';
 import { BRIEF } from './work.mjs';
@@ -57,8 +57,48 @@ function checkDate(value) {
 
 const plain = (text) => typeof text === 'string' && !/[`\n]/.test(text);
 
+const under = (path, dir) => path === dir || path.startsWith(`${dir}${sep}`);
+
+function gitDirs(sc) {
+  if (!sc.isGit) return [];
+  return ['--absolute-git-dir', '--git-common-dir']
+    .map((flag) => (git(sc.root, ['rev-parse', flag]) ?? '').trim())
+    .filter(Boolean)
+    .map((dir) => {
+      try {
+        return realpathSync(resolve(sc.root, dir));
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
+// The place a write really lands: links (also dangling ones) and linked folders are followed. It must be inside
+// the repo and outside .git, or nothing is written.
+function guardTarget(sc, path) {
+  const root = realpathSync(sc.root);
+  let target = path;
+  for (let hops = 0; hops < 40; hops += 1) {
+    let stat = null;
+    try {
+      stat = lstatSync(target);
+    } catch {
+      break;
+    }
+    if (!stat.isSymbolicLink()) break;
+    target = resolve(dirname(target), readlinkSync(target));
+  }
+  let probe = target;
+  while (!existsSync(probe) && dirname(probe) !== probe) probe = dirname(probe);
+  const real = join(realpathSync(probe), relative(probe, target));
+  if (!under(real, root)) throw new Error(`${rel(sc, path)} points outside the repo; Longevo writes only inside it.`);
+  if (gitDirs(sc).some((dir) => under(real, dir))) throw new Error(`${rel(sc, path)} is inside .git; Longevo never writes there.`);
+}
+
 function write(sc, op, path, before, after, extra = {}) {
   const file = rel(sc, path);
+  guardTarget(sc, path);
   if (before === after) return { op, file, status: 'unchanged', ...extra };
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, after);
@@ -102,6 +142,10 @@ function importAgents(sc, { file }) {
   if (!path) throw new Error('There is no CLAUDE.md here, so there is nothing to import into. Longevo does not create one.');
   if (lstatSync(path).isSymbolicLink()) {
     throw new Error(`${rel(sc, path)} is a link to ${relative(dirname(path), realpathSync(path))}, so Claude Code already reads that file. Nothing to import.`);
+  }
+  const agents = join(dirname(path).replace(/\/\.claude$/, ''), 'AGENTS.md');
+  if (existsSync(agents) && realpathSync(agents) === realpathSync(path)) {
+    throw new Error(`${rel(sc, path)} and ${rel(sc, agents)} are the same file, so every agent reads the same rules. Nothing to import.`);
   }
   const before = readFileSync(path, 'utf8');
   if (IMPORTS_AGENTS.test(prose(before))) return write(sc, 'import', path, before, before);
@@ -164,6 +208,7 @@ function verify(sc, { doc, verified }, { today, now }) {
 // A source was read and the doc still matches it: only that source's checked date changes.
 function checked(sc, { doc, url, checked: date }, { today }) {
   checkDate(date);
+  if (typeof url !== 'string' || !url.trim()) throw new Error('checked needs the url of the source.');
   const { path, before, data } = readDoc(sc, doc);
   const sources = (Array.isArray(data.sources) ? data.sources : []).map((s) => (typeof s === 'string' ? { url: s } : s));
   if (!sources.some((s) => s.url === url)) throw new Error(`${doc} does not cite ${url}.`);
@@ -197,14 +242,33 @@ function brief(sc, { slug, task, covers }, { today }) {
   }
   if (typeof task !== 'string' || !task.trim() || /\n/.test(task)) throw new Error('task needs one line: the issue link or a short title.');
   if (!Array.isArray(covers) || covers.length === 0) throw new Error('covers needs at least one glob.');
-  const { files } = listFiles(sc);
-  covers.forEach((glob) => checkGlob(files, glob));
+  // A brief comes before the code, so its globs may name folders that do not exist yet; they must stay in the repo.
+  for (const glob of covers) {
+    if (!plain(glob) || !glob.trim() || isAbsolute(glob) || glob.split('/').includes('..')) throw new Error(`${glob} must be a glob inside the repo.`);
+  }
   const path = inside(sc, `docs/work/${today}-${slug}/brief.md`, { markdown: true });
-  if (existsSync(path)) throw new Error(`${rel(sc, path)} already exists. Pick another slug.`);
+  const taken = () => {
+    try {
+      lstatSync(path);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  if (taken()) throw new Error(`${rel(sc, path)} already exists. Pick another slug.`);
   const title = slug.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
   const body = setFrontmatter(`# ${title}\n\n${BRIEF_SECTIONS.map((section) => `## ${section}\n`).join('\n')}`, { status: 'open', task, covers });
   // The task is always quoted: issue keys like #12 would start a YAML comment.
-  return write(sc, 'brief', path, null, body.replace(/^task: .*$/m, () => `task: ${JSON.stringify(task)}`));
+  guardTarget(sc, path);
+  mkdirSync(dirname(path), { recursive: true });
+  try {
+    // wx never follows or replaces an existing path, links included.
+    writeFileSync(path, body.replace(/^task: .*$/m, () => `task: ${JSON.stringify(task)}`), { flag: 'wx' });
+  } catch (error) {
+    if (error.code === 'EEXIST') throw new Error(`${rel(sc, path)} already exists. Pick another slug.`);
+    throw error;
+  }
+  return { op: 'brief', file: rel(sc, path), status: 'written' };
 }
 
 function done(sc, { doc }) {
@@ -222,5 +286,6 @@ const OPS = { block, import: importAgents, gemini, frontmatter, verify, checked,
 
 export function apply(op, cwd, input = {}, { today = localDate(), now = new Date() } = {}) {
   if (!Object.hasOwn(OPS, op)) throw new Error(`Unknown apply operation: ${op}. Use ${Object.keys(OPS).join(', ')}.`);
+  if ((git(cwd, ['rev-parse', '--is-inside-git-dir']) ?? '').trim() === 'true') throw new Error(`${cwd} is inside .git; run Longevo from the repo instead.`);
   return OPS[op](scope(cwd), input ?? {}, { today, now });
 }

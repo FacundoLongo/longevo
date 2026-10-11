@@ -5,7 +5,9 @@ const clean = (line) => line.replace(/\r$/, '');
 
 function scalar(value = '') {
   const v = value.trim();
-  if (/^".*"$/.test(v) || /^'.*'$/.test(v)) return v.slice(1, -1);
+  // A quoted value ends at its closing quote; a comment after it is not part of the value.
+  const quoted = v.match(/^"((?:[^"\\]|\\.)*)"/) ?? v.match(/^'([^']*)'/);
+  if (quoted) return quoted[1];
   return v.replace(/\s+#.*$/, '');
 }
 

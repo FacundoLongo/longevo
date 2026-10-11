@@ -4,7 +4,7 @@ import { readText } from './text.mjs';
 const TEST_FILE = new RegExp([
   '_test\\.go$', '\\.(test|spec)\\.[cm]?[jt]sx?$', '(^|/)test_[^/]+\\.py$', '_test\\.py$', 'Tests?\\.swift$',
   '(Test|Tests|IT)\\.(java|kt)$', 'Tests?\\.cs$', '_(spec|test)\\.rb$', 'Test\\.php$', '(^|/)tests/[^/]+\\.rs$',
-  '_test\\.exs$', '_test\\.dart$',
+  '_test\\.exs$', '_test\\.dart$', '(^|/)__tests__/.+\\.[cm]?[jt]sx?$',
 ].join('|'));
 const STORAGE_MOCK = new RegExp([
   'sqlmock|MockStorage|mockStorage|NewMockStore',

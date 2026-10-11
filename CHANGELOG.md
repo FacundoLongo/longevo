@@ -10,16 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 - `longevo-init` applies the changes you pick from a numbered list: the Longevo block in AGENTS.md, `@AGENTS.md` in CLAUDE.md, the Gemini CLI setting that makes it read AGENTS.md, doc frontmatter, `docs/testing.md`, rule moves between instruction files and `docs/coverage.md`. It never commits.
 - `docs/coverage.md`: tests by area and kind, and docs by area with their `verified` date.
 - The scan finds workspaces, git hotspots, pre-commit hooks, MCP server names, installed skills, rules or skills that some agents do not load, and stale docs.
-- Changes you decline are remembered inside `.git`, so `init` does not propose them again.
+- Changes you decline are remembered inside `.git`, so `init` and `sync` do not propose them again. Say "show declined" to see them again.
 - `longevo-sync` skill: checks stale docs, business rules and external sources against the code, and applies the small fixes you pick. It never changes code and never writes to external tools.
 - `docs/sources.md`, generated from the `sources` in each doc's frontmatter, and a rules table in `docs/coverage.md`.
 - The engine finds a working git when the macOS git shim fails inside a sandbox.
+- A doc checked twice on the same day gets the time in `verified` (`2026-10-11T18:35:12`), so the second check counts.
 - `longevo-brief` skill: reads the task from text, GitHub, Linear, Jira or Notion and saves a brief with the rules, affected code, golden tests, what must not change and WHEN/THEN acceptance criteria to `docs/work/`. It never writes to the tracker.
 - `longevo-review` skill: reviews the branch and the working tree against the rules, the testing guide, the docs and the brief with a fresh reviewer, and never changes code.
 
 ### Changed
 
-- The engine moved to `src/longevo.mjs` with `scan`, `apply` and `coverage` commands. Each command skill carries its own copy.
+- The engine moved to `src/longevo.mjs`, with the `scan`, `sync`, `context`, `review`, `apply` and `coverage` commands. Each command skill carries its own copy.
+- Secret checks know more secret shapes (Stripe, Slack, Google, JWT, passwords in URLs, quoted values) and leave ordinary code and placeholders alone.
+- Briefs and decisions are records: they are never reported as stale, even with `covers`.
+- `apply` refuses to write through links that point outside the repo or into `.git`.
 - The scan report is version 2.
 
 ## [0.1.0] - 2026-10-11

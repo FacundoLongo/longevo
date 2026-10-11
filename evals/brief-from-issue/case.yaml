@@ -40,12 +40,19 @@ graders:
     criteria: >
       The final message shows three sections of a saved brief. Pass only if all three hold: (1) under rules that
       apply, each cited rule has a status such as implemented and tested or implemented without test; (2) under
-      what must not change, it says that a refund (alone or together with other refunds) can never exceed the
-      amount paid, and asks for a regression test for it; (3) the acceptance criteria are WHEN/THEN lines.
+      what must not change, one item says a refund must never exceed the amount paid and names a regression test
+      for it; (3) the acceptance criteria are WHEN/THEN lines.
   - type: tool_used
     name: no-commit
     tool: Bash
     input_match: git commit
+    min: 0
+    max: 0
+    arm: both
+  - type: tool_used
+    name: no-stage
+    tool: Bash
+    input_match: git add
     min: 0
     max: 0
     arm: both

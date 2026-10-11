@@ -140,3 +140,9 @@ test('declined changes can be shown again', () => {
   assert.deepEqual(apply('undecline', root, { all: true }).declined, []);
   assert.ok(!existsSync(join(root, 'docs')));
 });
+
+test('code constants named like keys are not secrets', () => {
+  for (const line of ['const LONGEVO_KEY = /^(covers|verified):/m;', 'const KEY_VALUE = /^([\\w.-]+):(?:\\s+(.*))?$/;', 'const API_KEY = process.env.API_KEY;']) {
+    assert.equal(redact(line), line, line);
+  }
+});

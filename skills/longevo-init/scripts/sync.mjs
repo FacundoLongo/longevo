@@ -20,6 +20,7 @@ import { VERSION } from './scan.mjs';
 
 const MAX_COMMITS = 20;
 const MAX_DIFF_LINES = 300;
+const MAX_TOTAL_DIFF_LINES = 1500;
 
 function commitsTouching(sc, anchor, files) {
   const out = git(sc.root, ['log', '--no-merges', `--max-count=${MAX_COMMITS}`, '--format=%H%x09%s', `${anchor}..HEAD`, '--', ...files]) ?? '';
@@ -29,9 +30,11 @@ function commitsTouching(sc, anchor, files) {
   });
 }
 
-function diffSince(sc, anchor, files) {
-  const lines = (git(sc.root, ['diff', `${anchor}..HEAD`, '--', ...files]) ?? '').replace(/\n$/, '').split('\n');
-  return { diff: lines.slice(0, MAX_DIFF_LINES).join('\n'), truncated: lines.length > MAX_DIFF_LINES };
+function diffSince(sc, anchor, files, budget) {
+  const lines = (git(sc.root, ['diff', '--no-ext-diff', '--no-color', '--src-prefix=a/', '--dst-prefix=b/', `${anchor}..HEAD`, '--', ...files]) ?? '').replace(/\n$/, '').split('\n');
+  const keep = Math.max(0, Math.min(MAX_DIFF_LINES, budget.left));
+  budget.left -= keep;
+  return { diff: lines.slice(0, keep).join('\n'), truncated: lines.length > keep };
 }
 
 export function syncReport(cwd, { home = homedir(), today = localDate() } = {}) {
@@ -42,24 +45,27 @@ export function syncReport(cwd, { home = homedir(), today = localDate() } = {}) 
   const rules = findRules(sc, files);
   const sources = collectSources(sc, files);
   const work = briefs(sc, files);
+  // Diffs share one budget, so a few large changes cannot push the findings out of the agent's view.
+  const budget = { left: MAX_TOTAL_DIFF_LINES };
   const docs = living.living.map((doc) => {
     const text = readText(join(sc.root, doc.path)) ?? '';
-    const history = doc.stale ? { commits: commitsTouching(sc, doc.anchor, doc.changed), ...diffSince(sc, doc.anchor, doc.changed) } : { commits: [], diff: '', truncated: false };
+    const history = doc.stale ? { commits: commitsTouching(sc, doc.anchor, doc.changed), ...diffSince(sc, doc.anchor, doc.changed, budget) } : { commits: [], diff: '', truncated: false };
     const missing = [...new Set(missingPaths(sc.root, doc.path, citedPaths(codeSpans(text)), files).map((m) => m.path))];
     return { ...doc, ...history, missingPaths: missing };
   });
   const current = readText(join(sc.root, SOURCES_FILE));
+  // What the skill needs to decide comes first; the long diffs come last.
   return redactDeep({
     version: VERSION,
     scope: sc,
-    docs,
-    rules,
-    sources,
-    briefs: { done: work.filter((b) => b.status === 'done'), open: work.filter((b) => b.status !== 'done') },
     findings: [...docFindings(living), ...ruleFindings(sc, files, rules, files.filter(isTestFile)), ...sourceFindings(sources, today)],
+    declined: declined(sc),
     coverage: coverageState(sc.root, coverageFor(sc, files, generated, { docs: living.living, rules })),
     sourcesFile: { file: SOURCES_FILE, exists: current !== null, upToDate: current === renderSources(sources) },
+    briefs: { done: work.filter((b) => b.status === 'done'), open: work.filter((b) => b.status !== 'done') },
+    rules,
+    sources,
     mcp: mcpServers(sc, home),
-    declined: declined(sc),
+    docs,
   });
 }

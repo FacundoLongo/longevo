@@ -65,3 +65,23 @@ test('the CLI prints the review report', () => {
   assert.equal(result.status, 0, result.stdout);
   assert.equal(JSON.parse(result.stdout).base.ref, 'main');
 });
+
+test('marks generated files and leaves them out of the diff command', () => {
+  const root = branch();
+  writeFiles(root, { '.gitattributes': 'gen/** linguist-generated=true\n', 'gen/client.ts': 'export {};\n' });
+  gitIn(root, 'add', '-A');
+  gitIn(root, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'codegen');
+  const report = reviewReport(root);
+  assert.equal(report.changed.find((c) => c.path === 'gen/client.ts').skipped, 'generated');
+  assert.ok(!report.code.includes('gen/client.ts'));
+  assert.ok(report.diffCommand.includes(':(top,exclude,attr:linguist-generated=true)'));
+});
+
+test('skips secrets in generated files', () => {
+  const root = branch();
+  const token = `ghp_${'d'.repeat(36)}`;
+  writeFiles(root, { '.gitattributes': 'gen/** linguist-generated=true\n', 'gen/keys.ts': `export const T = "${token}";\n` });
+  gitIn(root, 'add', '-A');
+  gitIn(root, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'codegen');
+  assert.deepEqual(reviewReport(root).security, []);
+});

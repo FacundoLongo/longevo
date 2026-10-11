@@ -89,6 +89,7 @@ A script lists living docs whose `covers` changed after the anchor, `covers` tha
 - **What must not change.** Each item asks for a regression test.
 - **Open questions.**
 - **Acceptance criteria** as WHEN/THEN scenarios.
+- **Tests**, left empty for `longevo-testing` to fill when the tests are planned.
 
 | Tool | How it uses the brief |
 | --- | --- |

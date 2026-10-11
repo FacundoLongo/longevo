@@ -30,7 +30,7 @@ It returns the docs and rules that cover those paths, the tests near them, the g
 
 ## 4. Draft the brief
 
-Use the seven parts in [references/brief-template.md](references/brief-template.md):
+Use the eight parts in [references/brief-template.md](references/brief-template.md):
 
 - **Rules that apply:** each with its status and evidence.
 - **What must not change:** each item with the regression test that protects it.
@@ -58,6 +58,8 @@ If the user picks it:
    {"slug": "partial-refunds", "task": "https://github.com/acme/shop/issues/42", "covers": ["src/refunds/**"]}
    JSON
    ```
+
+   `covers` may name folders that do not exist yet, for code the task will add.
 
 2. Fill its sections with your edit tool, exactly as you showed them.
 3. Show the path.

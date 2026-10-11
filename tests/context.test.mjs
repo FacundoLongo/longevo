@@ -41,3 +41,8 @@ test('the CLI takes a comma-separated list of paths', () => {
   assert.equal(result.status, 0, result.stdout);
   assert.deepEqual(JSON.parse(result.stdout).paths.map((p) => p.files), [1, 1]);
 });
+
+test('golden tests are paths, not other code names in the section', () => {
+  const root = makeRepo({ ...REPO, 'tests/a.test.mjs': 'x', 'docs/testing.md': '## Golden tests\n\n- `tests/a.test.mjs`: builds a repo with `makeRepo` and `writeFiles`.\n' });
+  assert.deepEqual(contextReport(root, { paths: ['src/cart/**'] }).golden, ['tests/a.test.mjs']);
+});

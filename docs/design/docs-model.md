@@ -22,13 +22,13 @@ docs/
 ├── testing.md                # test command, test type per layer, golden tests
 ├── sources.md                # index of external links
 ├── coverage.md               # generated: tests and docs by area; never edited by hand
-└── work/<date>-<slug>/       # briefs in progress; archived when done
+└── work/<date>-<slug>/       # briefs; a finished one gets status: done and stays
 ```
 
 | Kind | Examples | Checked for drift |
 | --- | --- | --- |
 | Living | `domain/`, `testing.md` and docs the repo already had | Yes. Fixed with small diffs |
-| Record | `decisions/` and archived `work/` | No. An old record is marked as superseded |
+| Record | `decisions/` and the briefs in `work/` | No. An old record is marked as superseded |
 
 ## Living docs
 

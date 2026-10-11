@@ -1,6 +1,6 @@
 ---
-covers: ["src/lib/docs.mjs", "src/lib/coverage.mjs", "src/lib/frontmatter.mjs"]
-verified: 2026-10-11T15:55:59
+covers: ["src/lib/docs.mjs", "src/lib/coverage.mjs", "src/lib/frontmatter.mjs", "src/lib/rules.mjs", "src/lib/sources.mjs"]
+verified: 2026-10-11
 ---
 
 # Docs model

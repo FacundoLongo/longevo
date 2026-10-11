@@ -1,6 +1,6 @@
 ---
 covers: ["skills/*/SKILL.md", "src/lib/apply.mjs", "src/lib/block.mjs"]
-verified: 2026-10-11T15:55:59
+verified: 2026-10-11T16:46:03
 ---
 
 # Commands

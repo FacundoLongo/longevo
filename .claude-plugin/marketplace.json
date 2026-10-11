@@ -1,0 +1,14 @@
+{
+  "name": "longevo",
+  "description": "Marketplace for the Longevo plugin.",
+  "owner": { "name": "Facundo Longo" },
+  "plugins": [
+    {
+      "name": "longevo",
+      "description": "Agent skills for better tests and docs that stay true to the code.",
+      "version": "0.1.0",
+      "source": "./",
+      "author": { "name": "Facundo Longo" }
+    }
+  ]
+}

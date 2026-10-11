@@ -17,7 +17,7 @@ This folder explains how Longevo works, what comes next and why we chose it. Eve
 
 ## Rules for this folder
 
-- **Fixed places.** `design/` explains how Longevo works, `roadmap.md` says what comes next and `decisions/` records why. The first release adds `guides/` for install and use. No other folders.
+- **Fixed places.** `design/` explains how Longevo works, `roadmap.md` says what comes next and `decisions/` records why. `guides/` (install and use) arrives with 1.0; until then, install steps live in the README. No other folders.
 - **Add a section before you add a file.** A new file needs a topic that does not fit in any doc above. Add it to the map in the same pull request.
 - **Keep it short.** Aim for less than 100 lines per doc. Over 150 lines, split it by topic.
 - **Start with the point.** The first sentence says what the doc is for.

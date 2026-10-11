@@ -5,11 +5,23 @@ Longevo is built in four steps. Each step is useful on its own, and each one mus
 | Step | What is built | Gate |
 | --- | --- | --- |
 | 1. Review and tests | Read-only `init` and `longevo-testing` | Regenerated test suites are better than the originals, in one Go repo and one TypeScript repo |
-| 2. Setup | `init` applies changes: AGENTS.md block, `docs/testing.md`, doc frontmatter | No rule that one agent sees and another does not |
+| 2. Setup | `init` applies changes (AGENTS.md block, `docs/testing.md`, doc frontmatter) and generates `docs/coverage.md`; the scan adds git hotspots, workspaces, MCP servers, pre-commit hooks and installed skills | No rule that one agent sees and another does not |
 | 3. Living docs | `sync`, the drift script and external sources through MCP | Every drift warning matches a real change |
 | 4. Brief and review | `brief` and `review` | One real task from an issue tracker runs from start to end with fewer corrections |
 
 If a gate fails, we fix that step and repeat it.
+
+## Versions
+
+Each step ships as a minor version. The gate of each step runs as eval cases (`claude plugin eval`) in `evals/`.
+
+| Version | Ships when |
+| --- | --- |
+| 0.1.0 | Step 1 passes its gate and the install works from GitHub |
+| 0.2.0 | Step 2 passes its gate |
+| 0.3.0 | Step 3 passes its gate |
+| 0.4.0 | Step 4 passes its gate |
+| 1.0.0 | All four gates pass on real repos, the install is verified in the five agents, `docs/guides/` exists and every skill has eval cases |
 
 ## How we measure step 1
 

@@ -15,7 +15,7 @@ The Cursor, Gemini CLI and Copilot rows come from search results and secondary s
 ## Notes
 
 - **Names start with `longevo-`** because most agents keep all skills in one namespace, and Claude Code already has `/init` and `/review` ([D2](../decisions/packaging.md)).
-- **Install (planned):** a plugin for agents that support plugins, an extension for Gemini CLI, and a script that creates symlinks for the rest.
+- **Install:** see the [README](../../README.md#install).
 - **MCP is what changes between agents.** External sources work only where MCP servers are set up. What comes in stays in the repo, so every agent can use it.
 - **Cloud agents** do not see your home folder. The skills can be copied into the repo, in `.agents/skills` and `.claude/skills`.
 

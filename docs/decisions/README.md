@@ -9,6 +9,7 @@ The choices that shape Longevo, grouped by area. Read the index first. Open an a
 | D3 | Keep links to external sources only in the repo | [docs](docs.md) | Accepted |
 | D4 | Anchor drift checks to the commit that changed `verified` | [docs](docs.md) | Accepted |
 | D5 | Base the testing skill on Primo's skill | [testing](testing.md) | Accepted |
+| D6 | Keep a generated coverage record in the repo | [docs](docs.md) | Accepted |
 
 ## When to write a decision
 

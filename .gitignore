@@ -8,3 +8,6 @@
 # Local environment
 .env
 .env.*
+
+# Eval results from claude plugin eval
+evals/results/

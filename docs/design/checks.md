@@ -7,21 +7,25 @@ How `init` reviews a repo and its AGENTS.md, and how Longevo compares docs, code
 From cheap to expensive:
 
 1. **Scope:** the git root, or the folder you run it in and its parents.
-2. **Instruction files:** AGENTS.md, CLAUDE.md, GEMINI.md, `.cursor/rules`, Copilot instructions and skills, with their size.
-3. **Workspaces:** turbo, pnpm, nx, go.work and similar. Each package on its own.
-4. **Real commands:** manifests, Makefile, CI and pre-commit.
+2. **Instruction files:** AGENTS.md, CLAUDE.md, GEMINI.md, `.cursor/rules`, Copilot instructions and skills, with their size, and the Gemini CLI setting that makes it read AGENTS.md.
+3. **Workspaces:** pnpm, npm and yarn workspaces, turbo, nx, lerna, go.work, Cargo, uv, Gradle, Maven and `.sln`. Each package is an area.
+4. **Real commands:** manifests, Makefile, CI and pre-commit hooks.
 5. **Cross-check:** commands and paths in the instructions against what exists.
-6. **Git history:** the files that changed most in the last year.
-7. **Sampling:** README, entry points and one or two tests of the busiest packages. The only expensive step.
-8. **Safe execution, only with your OK:** `--help` or dry runs. Never install, migrate or deploy.
+6. **Git history:** the 10 files that changed most in the last year, without lockfiles, generated code or commits that touch more than 100 files.
+7. **Agent setup:** MCP server names and installed skills, in the repo and in your home folder. Never credentials, `env`, arguments or URLs. The report names each home file it read.
+8. **Living docs:** `covers`, `verified` and the files that changed after the anchor ([D4](../decisions/docs.md)).
+9. **Sampling:** README, entry points and one or two tests of the busiest packages. The only expensive step.
+10. **Safe execution, only with your OK:** `--help` or dry runs. Never install, migrate or deploy.
 
-Steps 1 to 6 are the script. Step 7 is the model.
+Steps 1 to 8 are the script. Step 9 is the model.
 
 ## Reviewing AGENTS.md
 
 | Check | Why it matters |
 | --- | --- |
 | Which file each agent loads, and CLAUDE.md next to AGENTS.md without `@AGENTS.md` | Otherwise each agent sees half of the rules |
+| Rules or skills that only one agent loads: `.cursor/rules`, Copilot instructions, GEMINI.md, `.claude/skills` | The other agents never see them. A rule moves to AGENTS.md unless AGENTS.md already says the same |
+| Another installed skill that does the same job as a Longevo skill | The agent may follow either one |
 | Every command exists, and there is one to run a single test | Agents run what they find |
 | Every path exists | 23% of repos point to code that no longer exists |
 | No overviews, folder trees or rules a linter already covers | They raise the cost and do not help |
@@ -44,7 +48,7 @@ Longevo compares three sources of truth in pairs: external sources (what the bus
 | `covers` that match no file, paths that do not exist | Script |
 | Rules whose `file:line` or test no longer exists | Script |
 | Rules without source, code or test | Script |
-| Sources not checked in a long time | Script |
+| Sources not checked in 30 days | Script |
 | A rule is implemented as it says | Model, with evidence |
 | The doc text is still true | Model, with evidence |
 | A source changed at the origin | Model, through MCP |

@@ -12,7 +12,7 @@
 
 | Part | In Primo | In Longevo |
 | --- | --- | --- |
-| Stack | Go and Postgres | One reference per stack: Go, TypeScript, Convex, Swift |
+| Stack | Go and Postgres | One reference per stack: Go, TypeScript, Python, Java and Kotlin, .NET, Ruby, PHP, Rust, Swift, Elixir and Convex. Other stacks use the generic guidelines |
 | Real storage | A cloned Postgres database | The most real option of each stack, validated one by one |
 | Golden list and test command | In AGENTS.md | In `docs/testing.md`, proposed by `init` |
 

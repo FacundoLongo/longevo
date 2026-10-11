@@ -1,0 +1,16 @@
+{
+  "name": "longevo",
+  "version": "0.1.0",
+  "description": "Agent skills for better tests and docs that stay true to the code.",
+  "author": { "name": "Facundo Longo", "url": "https://github.com/FacundoLongo" },
+  "homepage": "https://github.com/FacundoLongo/longevo",
+  "repository": "https://github.com/FacundoLongo/longevo",
+  "license": "MIT",
+  "keywords": ["skills", "testing", "documentation", "agents-md"],
+  "skills": "./skills/",
+  "hooks": {},
+  "interface": {
+    "displayName": "Longevo",
+    "shortDescription": "Better tests and docs that stay true to the code"
+  }
+}

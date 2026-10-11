@@ -31,3 +31,18 @@ Status: Accepted · 2026-10-11
 - It works after squash and rebase merges, and a typo fix in the doc does not reset the check.
 - If the doc and the code change in the same commit, the doc is not marked as stale.
 - We tested these cases in a test repo, and all of them worked.
+
+## D6. Keep a generated coverage record in the repo
+
+Status: Accepted · 2026-10-11
+
+**Context.** People want to know what is tested and where, and which code has a doc. The gap report is generated on demand and is not kept.
+
+**Options.** Only on-demand reports · A generated file in the repo · A file outside the repo
+
+**Decision.** `init` and `sync` generate `docs/coverage.md` with three short tables by area: rules and their tests, tests by type, and code with or without a current doc. Nobody edits it by hand. Each brief also keeps the testing skill's tables, so the history of what was tested stays with the change.
+
+**Consequences.**
+- Any agent can read the current state without running anything.
+- The file changes on every sync, so its diffs must stay small.
+- It is built in step 2.

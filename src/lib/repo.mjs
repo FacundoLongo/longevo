@@ -2,18 +2,48 @@ import { execFileSync } from 'node:child_process';
 import { readdirSync, realpathSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 
-export function git(cwd, args) {
-  try {
-    return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 });
-  } catch {
-    return null;
+// On macOS, /usr/bin/git is a shim that runs xcrun, and xcrun fails inside sandboxes because it cannot
+// write its cache. The real binaries still run, so try them in order.
+const GIT_CANDIDATES = [
+  process.env.LONGEVO_GIT,
+  'git',
+  '/Applications/Xcode.app/Contents/Developer/usr/bin/git',
+  '/Library/Developer/CommandLineTools/usr/bin/git',
+].filter(Boolean);
+
+export function gitBinary(candidates = GIT_CANDIDATES) {
+  for (const binary of candidates) {
+    try {
+      execFileSync(binary, ['--version'], { stdio: 'ignore' });
+      return binary;
+    } catch {
+      // Try the next one.
+    }
   }
+  return null;
 }
 
-// Runs git with text on stdin. Returns null when git fails.
+let resolved;
+const binary = () => {
+  if (resolved === undefined) resolved = gitBinary();
+  return resolved;
+};
+
+export function git(cwd, args) {
+  return gitInput(cwd, args, null);
+}
+
+// Runs git, with text on stdin when given. Returns null when git fails or is missing.
 export function gitInput(cwd, args, input) {
+  if (!binary()) return null;
   try {
-    return execFileSync('git', args, { cwd, input, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 });
+    return execFileSync(binary(), args, {
+      cwd,
+      input: input ?? undefined,
+      encoding: 'utf8',
+      stdio: [input === null ? 'ignore' : 'pipe', 'pipe', 'ignore'],
+      maxBuffer: 64 * 1024 * 1024,
+    });
   } catch {
     return null;
   }

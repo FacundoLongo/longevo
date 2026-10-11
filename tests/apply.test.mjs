@@ -148,3 +148,32 @@ test('the CLI reads the input from stdin and reports errors as JSON', () => {
   assert.equal(ok.status, 0, ok.stdout);
   assert.equal(JSON.parse(ok.stdout).status, 'written');
 });
+
+test('verify sets only the verified date', () => {
+  const root = makeRepo({ 'docs/a.md': '---\ncovers: ["src/**"]\nverified: 2026-01-01\n---\n# A\n', 'src/x.ts': '1' });
+  apply('verify', root, { doc: 'docs/a.md' }, { today: '2026-10-11' });
+  assert.equal(read(root, 'docs/a.md'), '---\ncovers: ["src/**"]\nverified: 2026-10-11\n---\n# A\n');
+  assert.throws(() => apply('verify', makeRepo({ 'docs/b.md': '# B\n' }), { doc: 'docs/b.md' }), /has no covers/);
+});
+
+test('updates one source and keeps the others', () => {
+  const text = '---\ntitle: x\nsources:\n  - url: https://a\n    checked: 2026-01-01\n  - url: https://b\n    title: B\n    checked: 2026-02-02\n---\n# A\n';
+  const root = makeRepo({ 'docs/a.md': text });
+  apply('checked', root, { doc: 'docs/a.md', url: 'https://b' }, { today: '2026-10-11' });
+  assert.equal(read(root, 'docs/a.md'), '---\ntitle: x\nsources:\n  - url: https://a\n    checked: 2026-01-01\n  - url: https://b\n    title: B\n    checked: 2026-10-11\n---\n# A\n');
+  assert.throws(() => apply('checked', root, { doc: 'docs/a.md', url: 'https://zzz' }), /does not cite/);
+});
+
+test('writes docs/sources.md', () => {
+  const root = makeRepo({ 'docs/a.md': '---\nsources:\n  - url: https://a\n    checked: 2026-10-01\n---\n' });
+  assert.equal(apply('sources', root, {}).status, 'written');
+  assert.match(read(root, 'docs/sources.md'), /\| https:\/\/a \| docs\/a\.md \| 2026-10-01 \|/);
+  assert.equal(apply('sources', root, {}).status, 'unchanged');
+});
+
+test('verifying twice in one day still changes the verified line', () => {
+  const root = makeRepo({ 'docs/a.md': '---\ncovers: ["src/**"]\nverified: 2026-10-11\n---\n# A\n', 'src/x.ts': '1' });
+  const result = apply('verify', root, { doc: 'docs/a.md' }, { today: '2026-10-11', now: new Date(2026, 9, 11, 18, 35, 12) });
+  assert.equal(result.status, 'written');
+  assert.match(read(root, 'docs/a.md'), /^verified: 2026-10-11T18:35:12$/m);
+});

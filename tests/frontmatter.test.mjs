@@ -61,3 +61,9 @@ test('replaces a block list value with the new list', () => {
 test('refuses to write into broken frontmatter', () => {
   assert.throws(() => setFrontmatter('---\ntitle: x\n', { verified: '2026-10-11' }), /not closed/);
 });
+
+test('writes a list of maps as a block', () => {
+  const out = setFrontmatter('---\ncovers: ["a/**"]\n---\n# A\n', { sources: [{ url: 'https://linear.app/x/1', checked: '2026-10-11' }, { url: 'https://notion.so/p', checked: '2026-09-01' }] });
+  assert.equal(out, '---\ncovers: ["a/**"]\nsources:\n  - url: https://linear.app/x/1\n    checked: 2026-10-11\n  - url: https://notion.so/p\n    checked: 2026-09-01\n---\n# A\n');
+  assert.deepEqual(parseFrontmatter(out).data.sources[1], { url: 'https://notion.so/p', checked: '2026-09-01' });
+});

@@ -42,7 +42,7 @@ verified: 2026-10-11          # the anchor is the commit that changed this line
 ---
 ```
 
-When files in `covers` change after the anchor commit, the doc is stale. `init` shows stale docs in the session update, and `sync` proposes the fix. See [D4](../decisions/docs.md).
+When files in `covers` change after the anchor commit, the doc is stale. `init` shows stale docs in the session update, and `sync` proposes the fix. See [D11](../decisions/docs.md).
 
 `init` proposes this frontmatter for at most five existing docs per run, starting with the areas that change most. It leaves decisions, ADRs and changelogs alone.
 

@@ -90,10 +90,19 @@ export function parseFrontmatter(text) {
   }
 }
 
-function render(v) {
-  if (Array.isArray(v)) return `[${v.map((item) => JSON.stringify(String(item))).join(', ')}]`;
+function renderScalar(v) {
   const s = String(v);
   return /^[\s[{"'#&*!|>%@`]|: |\s#|:$/.test(s) ? JSON.stringify(s) : s;
+}
+
+// One top-level key. A list of maps, like sources, becomes a block with one "- key: value" item per map.
+function renderEntry(key, v, eol) {
+  if (Array.isArray(v) && v.some((item) => item && typeof item === 'object')) {
+    const items = v.flatMap((item) => Object.entries(item).map(([k, value], index) => `${index === 0 ? '  - ' : '    '}${k}: ${renderScalar(value)}`));
+    return [`${key}:`, ...items].map((line) => `${line}${eol}`).join('\n');
+  }
+  const value = Array.isArray(v) ? `[${v.map((item) => JSON.stringify(String(item))).join(', ')}]` : renderScalar(v);
+  return `${key}: ${value}${eol}`;
 }
 
 // Sets top-level keys. Lines of other keys and the body are kept byte for byte.
@@ -102,7 +111,7 @@ export function setFrontmatter(text, updates) {
   if (parsed.error) throw new Error(parsed.error);
   const lines = text.split('\n');
   const eol = parsed.hasFrontmatter && lines[0].endsWith('\r') ? '\r' : '';
-  const rendered = Object.entries(updates).map(([key, v]) => [key, `${key}: ${render(v)}${eol}`]);
+  const rendered = Object.entries(updates).map(([key, v]) => [key, renderEntry(key, v, eol)]);
   if (!parsed.hasFrontmatter) return `---\n${rendered.map(([, line]) => line).join('\n')}\n---\n\n${text}`;
   const end = closingLine(lines);
   const block = lines.slice(1, end);

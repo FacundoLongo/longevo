@@ -93,3 +93,15 @@ test('a mock written inside a string is test data, not a mock', async () => {
   const rows = Object.fromEntries(analyzeTests(root, ['a.test.ts', 'b.test.ts']).map((row) => [row.file, row.mocksStorage]));
   assert.deepEqual(rows, { 'a.test.ts': true, 'b.test.ts': false });
 });
+
+test('the coverage record lists the rules found in docs', async () => {
+  const { coverageFor } = await import('../src/lib/coverage.mjs');
+  const { scope, listFiles } = await import('../src/lib/repo.mjs');
+  const root = makeRepo({
+    'docs/domain/pay.md': '### R-PAY-001 · No double charge\nCode: src/a.ts:1, src/b.ts:2-4\nTest: "x"\nStatus: implemented and tested\n',
+    'src/a.ts': '1\n',
+    'src/b.ts': '1\n2\n3\n4\n',
+  });
+  const sc = scope(root);
+  assert.match(coverageFor(sc, listFiles(sc).files, new Set()), /\| R-PAY-001 No double charge \| implemented and tested \| src\/a\.ts:1, src\/b\.ts:2-4 \| x \|/);
+});

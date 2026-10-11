@@ -18,7 +18,7 @@ From cheap to expensive:
 5. **Cross-check:** commands and paths in the instructions against what exists.
 6. **Git history:** the 10 files that changed most in the last year, without lockfiles, generated code or commits that touch more than 100 files.
 7. **Agent setup:** MCP server names and installed skills, in the repo and in your home folder. Never credentials, `env`, arguments or URLs. The report names each home file it read.
-8. **Living docs:** `covers`, `verified` and the files that changed after the anchor ([D4](../decisions/docs.md)).
+8. **Living docs:** `covers`, `verified` and the files that changed after the anchor ([D11](../decisions/docs.md)).
 9. **Sampling:** README, entry points and one or two tests of the busiest packages. The only expensive step.
 10. **Safe execution, only with your OK:** `--help` or dry runs. Never install, migrate or deploy.
 

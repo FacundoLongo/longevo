@@ -22,7 +22,7 @@
 Longevo is a small set of agent skills. It helps coding agents write tests that catch real bugs, and it keeps your docs true to the code.
 
 > [!NOTE]
-> Longevo is a preview. `longevo-init` and `longevo-testing` work today; `sync`, `brief` and `review` are being built for 0.2. See the [roadmap](docs/roadmap.md).
+> Longevo is a preview. `longevo-init`, `longevo-sync` and `longevo-testing` work today; `brief` and `review` are being built for 0.2. See the [roadmap](docs/roadmap.md).
 
 ## Why
 
@@ -40,7 +40,7 @@ Longevo does not replace your agent or your workflow. It improves what the agent
 | --- | --- | --- |
 | `/longevo-init` | The first time: reviews the repo and its AGENTS.md, and applies the changes you pick so every agent sees the same rules. Every session after that: a short update. | Yes |
 | `longevo-testing` | Runs by itself when the agent writes tests. Based on [Primo's testing skill](https://github.com/primo-devs/public-skills). | Yes |
-| `/longevo-sync` | Compares docs with the code and with external sources, and proposes small fixes. | Step 3 |
+| `/longevo-sync` | Compares docs with the code and with external sources, and applies the small fixes you pick. | Yes |
 | `/longevo-brief` | Collects the rules, code, docs and tests for one task, as input for spec-driven development. | Step 4 |
 | `/longevo-review` | Reviews a diff against the repo rules and the testing guide. | Step 4 |
 

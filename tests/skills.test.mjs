@@ -46,3 +46,13 @@ test('the init skill links every reference it has', () => {
   const skill = readFileSync(`${skillsRoot}/longevo-init/SKILL.md`, 'utf8');
   for (const file of readdirSync(`${skillsRoot}/longevo-init/references`)) assert.ok(skill.includes(`(references/${file})`), `SKILL.md does not link ${file}`);
 });
+
+test('the sync skill asks once, never writes outside the repo and never commits', () => {
+  const skill = readFileSync(`${skillsRoot}/longevo-sync/SKILL.md`, 'utf8');
+  assert.match(skill, /Which ones do I apply\? \[All \/ Pick numbers \/ None\]/);
+  assert.match(skill, /scripts\/longevo\.mjs sync --cwd \./);
+  assert.match(skill, /[Nn]ever stage or commit/);
+  assert.match(skill, /[Nn]ever write to (Notion|external)/);
+  assert.match(skill, /[Nn]ever change code/);
+  for (const file of readdirSync(`${skillsRoot}/longevo-sync/references`)) assert.ok(skill.includes(`(references/${file})`), file);
+});

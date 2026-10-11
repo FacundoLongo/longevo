@@ -97,3 +97,11 @@ test('a verified line inside a code block of the doc is not the anchor', () => {
   commit(root, { 'docs/pay.md': `${DOC}\n\`\`\`yaml\nverified: 2025-02-02\n\`\`\`\n` }, 'edit the example');
   assert.equal(docs(root).living[0].stale, true);
 });
+
+test('a second check on the same day, written with a time, clears the doc', () => {
+  const root = makeRepo({ 'docs/pay.md': DOC.replace('2026-10-01', '2026-10-11'), 'src/pay/a.ts': '1' });
+  commit(root, { 'src/pay/a.ts': '2' }, 'change pay');
+  assert.equal(docs(root).living[0].stale, true);
+  commit(root, { 'docs/pay.md': DOC.replace('2026-10-01', '2026-10-11T18:35:12') }, 'verify again');
+  assert.equal(docs(root).living[0].stale, false);
+});

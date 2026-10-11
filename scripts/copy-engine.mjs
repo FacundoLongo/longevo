@@ -4,7 +4,7 @@ import { cpSync, realpathSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const ENGINE_SKILLS = ['longevo-init'];
+export const ENGINE_SKILLS = ['longevo-init', 'longevo-sync'];
 
 export function copyEngine(repoRoot) {
   for (const skill of ENGINE_SKILLS) {

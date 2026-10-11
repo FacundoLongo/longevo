@@ -19,7 +19,7 @@ Status: Accepted · 2026-10-11
 
 ## D4. Anchor drift checks to the commit that changed `verified`
 
-Status: Accepted · 2026-10-11
+Status: Superseded by D11
 
 **Context.** A living doc lists the code it covers in `covers`, and Longevo must know if that code changed after the last check. A stored commit SHA fails twice: a commit cannot contain its own SHA, and squash merges remove SHAs.
 
@@ -74,3 +74,18 @@ Status: Accepted · 2026-10-11
 **Consequences.**
 - No hidden folder and no extra files in pull requests.
 - A new clone asks again about changes you declined in another clone.
+
+## D11. Anchor drift on the frontmatter `verified` value, with a time for a second check in one day
+
+Status: Accepted · 2026-10-11
+
+**Context.** D4 took the last commit that matched `git log -G'^verified:'` and stored a date. Running Longevo on its own repo showed two gaps: a `verified:` line in an example inside the doc moved the anchor, and a second check on the same day could not change the line, so the doc stayed stale until the next day.
+
+**Options.** Keep D4 · Always store a full timestamp · Keep the date, and add the time only when the date is already today's
+
+**Decision.** The anchor is the newest commit whose frontmatter `verified` value differs from the one in its parent; `git log -G` only finds the candidates. `verified` stays `YYYY-MM-DD`, and a second check on the same day writes `YYYY-MM-DDTHH:MM:SS`. Squash and rebase merges still work, as in D4. This supersedes D4.
+
+**Consequences.**
+- Examples in a doc's body never move the anchor, and a doc can be checked twice in one day.
+- Most docs keep a plain date; a few show a time.
+- One more git call for each candidate commit.

@@ -1,0 +1,41 @@
+schema_version: "1.1"
+name: sync-true-doc
+description: The covered code changed but the doc is still true. Sync keeps the text and only moves the verified date.
+context:
+  scaffold_script: scaffold.sh
+execution:
+  prompt: |
+    Check the docs with the longevo-sync skill and apply what you propose; my answer to "Which ones do I apply?" is All.
+  max_turns: 30
+  timeout_seconds: 900
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Edit, Write]
+runs: 1
+graders:
+  - type: tool_used
+    name: sync-skill-fired
+    tool: Skill
+    input_match: longevo-sync
+    arm: with-only
+  - type: regex
+    name: rule-text-kept
+    target: { source: file, path: docs/domain/refunds.md }
+    pattern: 'A refund expires after 48 hours'
+    match: contains
+  - type: regex
+    name: verified-date-moved
+    target: { source: file, path: docs/domain/refunds.md }
+    pattern: 'verified: 2026-01-15'
+    match: not_contains
+  - type: llm
+    name: says-still-true
+    focus: last_message
+    criteria: >
+      Pass only if the final message says that docs/domain/refunds.md is still true after the code change
+      and that the only change to it is a new verified date. It must not say that it changed the rule text.
+  - type: tool_used
+    name: no-commit
+    tool: Bash
+    input_match: git commit
+    min: 0
+    max: 0
+    arm: both

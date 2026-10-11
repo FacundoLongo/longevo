@@ -4,15 +4,23 @@ import { dirname, join, relative, sep } from 'node:path';
 import { generatedFiles } from './attributes.mjs';
 import { MAX_BLOCK_LINES, readBlock, renderBlock, writeBlock } from './block.mjs';
 import { coverageFor, COVERAGE_FILE } from './coverage.mjs';
-import { setFrontmatter } from './frontmatter.mjs';
+import { parseFrontmatter, setFrontmatter } from './frontmatter.mjs';
 import { matches } from './glob.mjs';
 import { IMPORTS_AGENTS, prose } from './instructions.mjs';
 import { listFiles, scope } from './repo.mjs';
+import { collectSources, renderSources, SOURCES_FILE } from './sources.mjs';
 import { addDeclined } from './state.mjs';
 
 const pad = (n) => String(n).padStart(2, '0');
 export function localDate(date = new Date()) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+// The new `verified` value. A second check on the same day adds the time, so the line still changes and its
+// commit becomes the new drift anchor (D11).
+export function nextVerified(current, date, now = new Date()) {
+  if (current === undefined || current === null || String(current).slice(0, 10) !== date) return date;
+  return `${date}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 }
 
 const readOrNull = (path) => {
@@ -97,6 +105,37 @@ function frontmatter(sc, { doc, covers, verified }, { today }) {
   return write(sc, 'frontmatter', path, before, setFrontmatter(before, { covers, verified: verified ?? today }));
 }
 
+function readDoc(sc, doc) {
+  if (typeof doc !== 'string' || !existsSync(join(sc.root, doc))) throw new Error(`${doc} does not exist.`);
+  const path = join(sc.root, doc);
+  const before = readFileSync(path, 'utf8');
+  const parsed = parseFrontmatter(before);
+  if (parsed.error) throw new Error(`${doc}: ${parsed.error}`);
+  return { path, before, data: parsed.data };
+}
+
+// The doc is still true: only its verified date changes.
+function verify(sc, { doc, verified }, { today, now }) {
+  const { path, before, data } = readDoc(sc, doc);
+  if (!data.covers) throw new Error(`${doc} has no covers, so it is not a living doc.`);
+  return write(sc, 'verify', path, before, setFrontmatter(before, { verified: nextVerified(data.verified, verified ?? today, now) }));
+}
+
+// A source was read and the doc still matches it: only that source's checked date changes.
+function checked(sc, { doc, url, checked: date }, { today }) {
+  const { path, before, data } = readDoc(sc, doc);
+  const sources = (Array.isArray(data.sources) ? data.sources : []).map((s) => (typeof s === 'string' ? { url: s } : s));
+  if (!sources.some((s) => s.url === url)) throw new Error(`${doc} does not cite ${url}.`);
+  const next = sources.map((s) => (s.url === url ? { ...s, checked: date ?? today } : s));
+  return write(sc, 'checked', path, before, setFrontmatter(before, { sources: next }));
+}
+
+function sources(sc) {
+  const { files } = listFiles(sc);
+  const path = join(sc.root, SOURCES_FILE);
+  return write(sc, 'sources', path, readOrNull(path), renderSources(collectSources(sc, files)));
+}
+
 function coverage(sc) {
   const { files } = listFiles(sc);
   const path = join(sc.root, COVERAGE_FILE);
@@ -108,9 +147,9 @@ function decline(sc, { keys }) {
   return { op: 'decline', declined: addDeclined(sc, keys) };
 }
 
-const OPS = { block, import: importAgents, gemini, frontmatter, coverage, decline };
+const OPS = { block, import: importAgents, gemini, frontmatter, verify, checked, sources, coverage, decline };
 
-export function apply(op, cwd, input = {}, { today = localDate() } = {}) {
+export function apply(op, cwd, input = {}, { today = localDate(), now = new Date() } = {}) {
   if (!Object.hasOwn(OPS, op)) throw new Error(`Unknown apply operation: ${op}. Use ${Object.keys(OPS).join(', ')}.`);
-  return OPS[op](scope(cwd), input ?? {}, { today });
+  return OPS[op](scope(cwd), input ?? {}, { today, now });
 }

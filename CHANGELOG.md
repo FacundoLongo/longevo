@@ -11,6 +11,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 - `docs/coverage.md`: tests by area and kind, and docs by area with their `verified` date.
 - The scan finds workspaces, git hotspots, pre-commit hooks, MCP server names, installed skills, rules or skills that some agents do not load, and stale docs.
 - Changes you decline are remembered inside `.git`, so `init` does not propose them again.
+- `longevo-sync` skill: checks stale docs, business rules and external sources against the code, and applies the small fixes you pick. It never changes code and never writes to external tools.
+- `docs/sources.md`, generated from the `sources` in each doc's frontmatter, and a rules table in `docs/coverage.md`.
+- The engine finds a working git when the macOS git shim fails inside a sandbox.
 
 ### Changed
 

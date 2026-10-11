@@ -55,7 +55,7 @@ export function livingDocs(sc, files, generated) {
       const anchor = data.verified ? anchorOf(sc, path) : null;
       const changed = anchor ? changedSince(sc, anchor, covers, generated) : [];
       const unmatched = covers.filter((pattern) => !files.some((file) => matches(file, pattern)));
-      living.push({ path, covers, verified: data.verified ?? null, stale: changed.length > 0, changed, unmatched });
+      living.push({ path, covers, verified: data.verified ?? null, anchor, stale: changed.length > 0, changed, unmatched });
     } else if (/(^|\/)docs\//.test(path) && !RECORD.test(path) && !GENERATED_DOC.test(path) && !/(^|\/)CHANGELOG/i.test(path)) {
       candidates.push({ path, lines: countLines(text) });
     }

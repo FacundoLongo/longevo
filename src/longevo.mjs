@@ -7,6 +7,7 @@ import { generatedFiles } from './lib/attributes.mjs';
 import { coverageFor } from './lib/coverage.mjs';
 import { listFiles, scope } from './lib/repo.mjs';
 import { scan, VERSION } from './scan.mjs';
+import { syncReport } from './sync.mjs';
 
 export function parseArgs(argv) {
   const args = { command: argv[0], rest: [], cwd: process.cwd(), markSession: false, input: null };
@@ -29,6 +30,7 @@ export function parseArgs(argv) {
 export function run(argv) {
   const args = parseArgs(argv);
   if (args.command === 'scan') return scan(args.cwd, { markSession: args.markSession });
+  if (args.command === 'sync') return syncReport(args.cwd);
   if (args.command === 'apply') {
     const raw = args.input ? readFileSync(args.input, 'utf8') : process.stdin.isTTY ? '' : readFileSync(0, 'utf8');
     let input = {};
@@ -46,7 +48,7 @@ export function run(argv) {
     const { files } = listFiles(sc);
     return coverageFor(sc, files, generatedFiles(sc, files)).replace(/\n$/, '');
   }
-  throw new Error(`Unknown command: ${args.command ?? '(none)'}. Use scan, apply or coverage.`);
+  throw new Error(`Unknown command: ${args.command ?? '(none)'}. Use scan, sync, apply or coverage.`);
 }
 
 const isMain = process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);

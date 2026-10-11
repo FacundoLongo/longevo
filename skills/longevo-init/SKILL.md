@@ -61,7 +61,7 @@ Then show `git diff --stat`. Never stage or commit.
 
 ## 7. Session update
 
-At most 10 lines: the commits in `session.commits`, stale docs (`doc-stale`), the current high-severity findings, and broken commands or paths. The scan does not remember earlier findings, so never call a finding new. If there are no commits and nothing to report, say so in one line.
+At most 10 lines: the commits in `session.commits`, stale docs (`doc-stale`), the current high-severity findings, and broken commands or paths. When docs are stale, suggest `longevo-sync`. The scan does not remember earlier findings, so never call a finding new. If there are no commits and nothing to report, say so in one line.
 
 If `coverage.upToDate` is false or the block should change, end with the numbered list and the same question as in section 5.
 

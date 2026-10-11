@@ -1,11 +1,12 @@
 # Contributing
 
-Longevo 0.1 is a preview. Questions and ideas are welcome as issues. Read the [docs](docs/README.md) first.
+Longevo is a preview. Questions and ideas are welcome as issues. Read the [docs](docs/README.md) first.
 
 ## Working on the code
 
 - You need Node 18 or newer. There are no dependencies to install.
 - Run `npm test` and `npm run validate` before you open a pull request.
+- The engine lives in `src/`. Each command skill carries a copy in its `scripts/` folder, so it works when installed alone. After you change `src/`, run `npm run engine`; a test fails if a copy is out of date.
 - A new skill goes in `skills/longevo-<name>/`, with a short `SKILL.md` and the details in `references/`. The validator checks the name, the size and the links.
 - Keep the version in `package.json` and in every manifest the same. A test checks it.
 

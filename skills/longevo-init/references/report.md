@@ -1,6 +1,6 @@
 # Report
 
-Use this structure for a full review. Skip a section that has nothing to say.
+Use this structure for a setup or an audit. Skip a section that has nothing to say.
 
 ## 1. Summary
 
@@ -8,38 +8,37 @@ Two or three sentences on where the folder stands, then the three actions with t
 
 ## 2. Who loads what
 
-| Agent | Files it loads | Notes |
-| --- | --- | --- |
-| Claude Code | from `instructions.loads.claude-code` | size, import of AGENTS.md |
-| Codex | from `instructions.loads.codex` | total bytes against 32 KiB |
-| Cursor | from `instructions.loads.cursor` | |
-| Gemini CLI | from `instructions.loads.gemini` | reads AGENTS.md only if configured |
-| Copilot | from `instructions.loads.copilot` | |
+| Agent | In use | Files it loads | Notes |
+| --- | --- | --- | --- |
+| Claude Code | from `agents.inUse` | from `instructions.loads.claude-code` | import of AGENTS.md |
+| Codex | | from `instructions.loads.codex` | total bytes against 32 KiB |
+| Cursor | | from `instructions.loads.cursor` | |
+| Gemini CLI | | from `instructions.loads.gemini` | reads AGENTS.md only with `context.fileName` |
+| Copilot | | from `instructions.loads.copilot` | |
 
 ## 3. Findings
 
-One row per finding, most severe first: severity, what is wrong, evidence (`file:line`). Under the table, one proposed diff per fix:
-
-```diff
-- Read AGENTS.md for the rules.
-+ @AGENTS.md
-```
+One row per finding, most severe first: severity, what is wrong, evidence (`file:line`).
 
 ## 4. Commands
 
 | Command in the instructions | Exists | Where |
 | --- | --- | --- |
 
-Add the real test command from `commands.real` when the instructions miss it.
+Add the real test command from `commands.real` (scripts, targets, CI and hooks) when the instructions miss it.
 
-## 5. Tests
+## 5. Tests and docs
 
-Tests by area from `tests.byArea`, and the anti-golden tests you confirmed, with the reason.
+Tests by area and kind from `tests`, the anti-golden tests you confirmed with the reason, living docs from `docs.living` with their `verified` date, and the stale ones.
 
-## 6. Questions
+## 6. Agent setup
 
-Only what the code cannot answer, one at a time.
+MCP servers by name and where they are set (`agents.mcp`), repo skills that some agents miss, and overlapping skills. Name the home files you read (`home.read`).
 
-## 7. Not checked
+## 7. Changes
+
+The numbered list from SKILL.md section 5, each with its diff, then the question. In an audit, leave this section out.
+
+## 8. Not checked
 
 What the script or you could not check (including the folders in `notScanned`), and the command used, so the user can repeat it.

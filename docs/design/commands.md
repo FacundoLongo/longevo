@@ -46,7 +46,7 @@ Only the changes you pick from the list:
 - `docs/testing.md` and `docs/coverage.md`,
 - prose diffs it showed you, like moving a rule from CLAUDE.md or `.cursor/rules` to AGENTS.md.
 
-A script, `apply.mjs`, writes the block, the `@AGENTS.md` line, the Gemini setting, the frontmatter and `docs/coverage.md`, so the same input gives the same file in every agent. The model writes `docs/testing.md` from a template and applies the prose diffs exactly as it showed them. Longevo changes text outside its block only through a diff you picked. `docs/sources.md` arrives with `sync` in step 3.
+The engine (`longevo.mjs apply`) writes the block, the `@AGENTS.md` line, the Gemini setting, the frontmatter and `docs/coverage.md`, so the same input gives the same file in every agent. The model writes `docs/testing.md` from a template and applies the prose diffs exactly as it showed them. Longevo changes text outside its block only through a diff you picked. `docs/sources.md` arrives with `sync` in step 3.
 
 ### The Longevo block
 

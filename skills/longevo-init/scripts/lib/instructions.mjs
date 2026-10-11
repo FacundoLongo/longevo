@@ -17,8 +17,11 @@ const PATTERNS = [
 const base = (file) => file.split('/').pop();
 const dirOf = (file) => (file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '');
 
+// An @AGENTS.md import in CLAUDE.md, also written as @./AGENTS.md or @../AGENTS.md.
+export const IMPORTS_AGENTS = /(^|\s)@(?:\.{1,2}\/)*AGENTS\.md\b/m;
+
 // The folder an instruction file applies to: .cursor/rules, .github and .claude belong to their parent.
-function ownerDir(file) {
+export function ownerDir(file) {
   return dirOf(file)
     .replace(/(^|\/)\.cursor\/rules(\/.*)?$/, '')
     .replace(/(^|\/)\.github(\/instructions)?$/, '')
@@ -26,7 +29,7 @@ function ownerDir(file) {
 }
 
 // Text outside code, so an example in backticks is not read as an import.
-const prose = (text) => text.replace(/```[\s\S]*?```/g, '').replace(/`[^`\n]*`/g, '');
+export const prose = (text) => text.replace(/```[\s\S]*?```/g, '').replace(/`[^`\n]*`/g, '');
 
 function rawSize(root, path, text) {
   try {
@@ -56,11 +59,11 @@ export function inventory(sc, files, texts) {
   }));
 }
 
-export function whoLoads(dirs, files, texts) {
+export function whoLoads(dirs, files, texts, { geminiFiles = ['GEMINI.md'] } = {}) {
   const inChain = (name) => files.filter((file) => base(file) === name && dirs.includes(ownerDir(file)));
   const claudeFiles = [...inChain('CLAUDE.md'), ...inChain('CLAUDE.local.md')];
   const agentsFiles = inChain('AGENTS.md');
-  const importsAgents = claudeFiles.some((file) => /(^|\s)@(\.\/)?AGENTS\.md\b/m.test(prose(texts[file] ?? '')));
+  const importsAgents = claudeFiles.some((file) => IMPORTS_AGENTS.test(prose(texts[file] ?? '')));
   const claude = claudeFiles.length ? [...claudeFiles, ...(importsAgents ? agentsFiles : [])] : agentsFiles;
   const codex = dirs.flatMap((dir) => {
     const prefix = dir ? `${dir}/` : '';
@@ -69,11 +72,13 @@ export function whoLoads(dirs, files, texts) {
     return override ? [override] : agents ? [agents] : [];
   });
   const cursor = [...agentsFiles, ...files.filter((file) => /(^|\/)\.cursor\/rules\/.+\.mdc$/.test(file) || base(file) === '.cursorrules')];
-  const gemini = inChain('GEMINI.md');
-  const copilot = [
+  const gemini = [...new Set(geminiFiles.flatMap(inChain))];
+  const copilot = [...new Set([
     ...files.filter((file) => /(^|\/)\.github\/(copilot-instructions\.md|instructions\/.+\.instructions\.md)$/.test(file)),
-    ...agentsFiles.slice(-1),
-  ];
+    ...agentsFiles,
+    ...inChain('CLAUDE.md'),
+    ...inChain('GEMINI.md'),
+  ])].sort();
   return { 'claude-code': claude, codex, cursor, gemini, copilot };
 }
 
@@ -94,7 +99,7 @@ export function instructionFindings(inv, loads) {
     });
   }
   if (claudeFiles.length && !hasAgents) {
-    findings.push({ id: 'only-claude-md', severity: 'medium', evidence: claudeFiles, message: 'The rules live only in CLAUDE.md. Codex, Cursor and Copilot do not load it.' });
+    findings.push({ id: 'only-claude-md', severity: 'medium', evidence: claudeFiles, message: 'The rules live only in CLAUDE.md. Codex, Cursor and Gemini CLI do not load it.' });
   }
   for (const file of inv) {
     if (base(file.path) === 'CLAUDE.md' && file.lines > 200) {
@@ -110,6 +115,31 @@ export function instructionFindings(inv, loads) {
   }
   if (inv.some((file) => base(file.path) === 'CLAUDE.local.md') && hasAgents) {
     findings.push({ id: 'claude-local-hides-agents', severity: 'low', message: 'CLAUDE.local.md exists, so Claude Code ignores AGENTS.md on this machine.' });
+  }
+  return findings;
+}
+
+// True when a file has rules of its own, not only a title and an import.
+function hasOwnRules(text = '') {
+  const body = text.replace(/^---\n[\s\S]*?\n---\n?/, '');
+  return body.split('\n').some((line) => line.trim() && !/^\s*#/.test(line) && !/^\s*@\S+\s*$/.test(line));
+}
+
+// Instruction files in the chain that some agent in use does not load.
+export function unsharedRules(dirs, inv, texts, loads, inUse) {
+  const findings = [];
+  for (const { path } of inv) {
+    if (base(path) === 'CLAUDE.local.md' || !dirs.includes(ownerDir(path)) || !hasOwnRules(texts[path])) continue;
+    const missing = inUse.filter((agent) => !loads[agent].includes(path));
+    if (missing.length) {
+      findings.push({
+        id: 'rules-not-shared',
+        severity: 'high',
+        evidence: [path],
+        agents: missing,
+        message: `${path} has rules that ${missing.join(', ')} ${missing.length === 1 ? 'does' : 'do'} not load.`,
+      });
+    }
   }
   return findings;
 }

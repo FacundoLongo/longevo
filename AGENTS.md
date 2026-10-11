@@ -1,12 +1,13 @@
 # Longevo
 
-Agent skills for better tests and docs that stay true to the code. Version 0.1 ships `longevo-testing` and a read-only `longevo-init`.
+Agent skills for better tests and docs that stay true to the code.
 
 ## Where things are
 
-- `skills/`: one folder per skill (`longevo-<name>/` with `SKILL.md`, `references/` and, if needed, `scripts/`).
-- `scripts/`: repo tools: the skill validator and the manual installer.
-- `tests/`: `node:test` tests for the scan script, the validator, the manifests and the installer.
+- `skills/`: one folder per skill (`longevo-<name>/` with `SKILL.md` and `references/`).
+- `src/`: the engine (`longevo.mjs` with `scan`, `apply` and `coverage`). Each command skill carries a copy in its `scripts/` folder. Never edit the copies; edit `src/` and run `npm run engine`.
+- `scripts/`: repo tools: the skill validator, the engine copier and the manual installer.
+- `tests/`: `node:test` tests for the engine, the validator, the manifests and the installer.
 - `evals/`: eval cases that run each skill with and without Longevo (`claude plugin eval`). Run them when you change a skill; see CONTRIBUTING.md.
 - `.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/` and `gemini-extension.json`: they package the same `skills/` folder for each agent.
 - `docs/README.md`: the map of all docs and the rules for adding one. Read it before you create or change a doc.
@@ -16,7 +17,7 @@ Agent skills for better tests and docs that stay true to the code. Version 0.1 s
 
 ## Rules
 
-- Run `npm test` and `npm run validate` before you commit. Run one test file with `node --test tests/scan.test.mjs`.
+- Run `npm run engine`, `npm test` and `npm run validate` before you commit. Run one test file with `node --test tests/scan.test.mjs`.
 - No dependencies: code uses only Node 18 built-ins.
 - Keep the version in `package.json` and in every manifest the same.
 - Write every repo file in plain English.

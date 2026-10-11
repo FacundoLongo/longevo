@@ -5,9 +5,12 @@
   "description": "Agent skills for better tests and docs that stay true to the code.",
   "license": "MIT",
   "type": "module",
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "validate": "node scripts/validate-skills.mjs skills"
+    "validate": "node scripts/validate-skills.mjs skills",
+    "engine": "node scripts/copy-engine.mjs"
   }
 }

@@ -5,6 +5,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
+### Added
+
+- `longevo-init` applies the changes you pick from a numbered list: the Longevo block in AGENTS.md, `@AGENTS.md` in CLAUDE.md, the Gemini CLI setting that makes it read AGENTS.md, doc frontmatter, `docs/testing.md`, rule moves between instruction files and `docs/coverage.md`. It never commits.
+- `docs/coverage.md`: tests by area and kind, and docs by area with their `verified` date.
+- The scan finds workspaces, git hotspots, pre-commit hooks, MCP server names, installed skills, rules or skills that some agents do not load, and stale docs.
+- Changes you decline are remembered inside `.git`, so `init` does not propose them again.
+
+### Changed
+
+- The engine moved to `src/longevo.mjs` with `scan`, `apply` and `coverage` commands. Each command skill carries its own copy.
+- The scan report is version 2.
+
 ## [0.1.0] - 2026-10-11
 
 ### Added

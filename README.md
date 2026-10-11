@@ -22,7 +22,7 @@
 Longevo is a small set of agent skills. It helps coding agents write tests that catch real bugs, and it keeps your docs true to the code.
 
 > [!NOTE]
-> Longevo 0.1 is a preview: `longevo-testing` and a read-only `longevo-init`. The other commands are in the [roadmap](docs/roadmap.md).
+> Longevo is a preview. `longevo-init` and `longevo-testing` work today; `sync`, `brief` and `review` are being built for 0.2. See the [roadmap](docs/roadmap.md).
 
 ## Why
 
@@ -38,7 +38,7 @@ Longevo does not replace your agent or your workflow. It improves what the agent
 
 | Command | What it does | In 0.1 |
 | --- | --- | --- |
-| `/longevo-init` | The first time: reviews the repo and its AGENTS.md, and proposes changes. Every session after that: a short update. | Yes, read-only |
+| `/longevo-init` | The first time: reviews the repo and its AGENTS.md, and applies the changes you pick so every agent sees the same rules. Every session after that: a short update. | Yes |
 | `longevo-testing` | Runs by itself when the agent writes tests. Based on [Primo's testing skill](https://github.com/primo-devs/public-skills). | Yes |
 | `/longevo-sync` | Compares docs with the code and with external sources, and proposes small fixes. | Step 3 |
 | `/longevo-brief` | Collects the rules, code, docs and tests for one task, as input for spec-driven development. | Step 4 |
@@ -49,7 +49,7 @@ Every command works the same way:
 1. **Scan** the repo first.
 2. **Ask** only what the code cannot answer, one question at a time.
 3. **Propose** changes as diffs.
-4. **Wait** for your OK. Longevo never commits, and writes nothing without your OK except a session timestamp inside `.git`.
+4. **You pick** which changes to apply. Longevo writes only those, never commits, and keeps its own state inside `.git`.
 
 ## Install
 

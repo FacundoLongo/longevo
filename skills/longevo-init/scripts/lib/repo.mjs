@@ -10,6 +10,15 @@ export function git(cwd, args) {
   }
 }
 
+// Runs git with text on stdin. Returns null when git fails.
+export function gitInput(cwd, args, input) {
+  try {
+    return execFileSync('git', args, { cwd, input, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 });
+  } catch {
+    return null;
+  }
+}
+
 export function scope(cwd) {
   let dir = resolve(cwd);
   try {

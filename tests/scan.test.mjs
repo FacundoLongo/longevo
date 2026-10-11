@@ -5,8 +5,12 @@ import { chmodSync, mkdtempSync, realpathSync, symlinkSync, writeFileSync } from
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { scan } from '../skills/longevo-init/scripts/scan.mjs';
+import { scan as scanWithHome } from '../src/scan.mjs';
 import { gitIn, makeRepo, writeFiles } from './helpers/fixture.mjs';
+
+// Tests never read the real home folder.
+const EMPTY_HOME = realpathSync(mkdtempSync(join(tmpdir(), 'longevo-home-')));
+const scan = (cwd, options = {}) => scanWithHome(cwd, { home: EMPTY_HOME, ...options });
 
 const ids = (report) => report.findings.map((f) => f.id);
 
@@ -134,12 +138,12 @@ test('marks the session and lists commits since the last one', () => {
 
 test('the CLI prints JSON when it runs through a symlink', () => {
   const root = makeRepo({ 'AGENTS.md': '# Rules\n' });
-  const real = fileURLToPath(new URL('../skills/longevo-init/scripts/scan.mjs', import.meta.url));
-  const link = join(realpathSync(mkdtempSync(join(tmpdir(), 'longevo-link-'))), 'scan.mjs');
+  const real = fileURLToPath(new URL('../src/longevo.mjs', import.meta.url));
+  const link = join(realpathSync(mkdtempSync(join(tmpdir(), 'longevo-link-'))), 'longevo.mjs');
   symlinkSync(real, link);
-  const result = spawnSync(process.execPath, [link, '--cwd', root], { encoding: 'utf8' });
+  const result = spawnSync(process.execPath, [link, 'scan', '--cwd', root], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(JSON.parse(result.stdout).version, 1);
+  assert.equal(JSON.parse(result.stdout).version, 2);
 });
 
 test('never prints a secret from a path, a script name or a commit subject', () => {
@@ -229,4 +233,26 @@ test('recognizes tests, storage mocks and single-test commands across languages'
   assert.equal(report.tests.total, 7);
   assert.equal(report.tests.antiGoldenCandidates.length, 7);
   assert.ok(!report.findings.some((f) => f.id === 'no-single-test-command'));
+});
+
+test('the version 2 report has every new field, also outside git', () => {
+  for (const git of [true, false]) {
+    const root = makeRepo({ 'AGENTS.md': '# R\n', 'src/a.ts': '1' }, { git });
+    const report = scan(root);
+    assert.equal(report.version, 2);
+    for (const key of ['home', 'workspaces', 'hotspots', 'hooks', 'agents', 'docs', 'block', 'coverage', 'declined']) {
+      assert.ok(key in report, `${key} missing (git: ${git})`);
+    }
+    assert.deepEqual(report.block, { file: 'AGENTS.md', exists: false, lines: null });
+    assert.equal(report.coverage.exists, false);
+    assert.deepEqual(report.declined, []);
+  }
+});
+
+test('reports the Longevo block and hook commands', () => {
+  const root = makeRepo({ 'AGENTS.md': '# R\n<!-- longevo:start -->\n## Longevo\n- x\n<!-- longevo:end -->\n', 'lefthook.yml': 'pre-commit:\n  commands:\n    lint:\n      run: pnpm lint\n' });
+  const report = scan(root);
+  assert.deepEqual(report.block, { file: 'AGENTS.md', exists: true, lines: 2 });
+  assert.deepEqual(report.commands.real.hooks, ['pnpm lint']);
+  assert.deepEqual(report.hooks.map((h) => h.tool), ['lefthook']);
 });

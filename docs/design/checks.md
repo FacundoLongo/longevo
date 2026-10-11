@@ -1,3 +1,8 @@
+---
+covers: ["src/scan.mjs", "src/lib/**"]
+verified: 2026-10-11
+---
+
 # Checks
 
 How `init` reviews a repo and its AGENTS.md, and how Longevo compares docs, code and external sources.

@@ -25,3 +25,15 @@ Agent skills for better tests and docs that stay true to the code.
 - Group related changes in one commit. Avoid many small commits.
 - Add one line to `CHANGELOG.md` under Unreleased for each change that people who use Longevo will notice. No marketing words, no emojis.
 - Keep docs short: under 100 lines when possible, and never over 150.
+
+<!-- longevo:start -->
+## Longevo
+- If you write or change tests, read `docs/testing.md`.
+- If you change `skills/*/SKILL.md`, read `docs/design/commands.md`.
+- If you change `skills/longevo-testing/**`, read `docs/design/testing.md`.
+- If you change `src/lib/**`, read `docs/design/checks.md`.
+- If you change `src/lib/agents.mjs`, read `docs/design/agents.md`.
+- If you change `src/lib/docs.mjs`, read `docs/design/docs-model.md`.
+- What is tested and documented: `docs/coverage.md`.
+- Start each session with the `longevo-init` skill.
+<!-- longevo:end -->

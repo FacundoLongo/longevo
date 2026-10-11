@@ -1,3 +1,8 @@
+---
+covers: ["src/lib/agents.mjs", "src/lib/instructions.mjs", ".claude-plugin/**", ".codex-plugin/**", ".cursor-plugin/**", "gemini-extension.json"]
+verified: 2026-10-11
+---
+
 # Agents
 
 How each agent loads Longevo. The skills use the Agent Skills format, so the same files work everywhere ([D1](../decisions/packaging.md)).

@@ -1,3 +1,8 @@
+---
+covers: ["skills/longevo-testing/**"]
+verified: 2026-10-11
+---
+
 # Testing
 
 `longevo-testing` runs by itself when the agent writes or plans tests. It starts from Primo's testing skill (MIT) and makes it work for more stacks ([D5](../decisions/testing.md)).

@@ -1,3 +1,8 @@
+---
+covers: ["skills/*/SKILL.md", "src/lib/apply.mjs", "src/lib/block.mjs"]
+verified: 2026-10-11
+---
+
 # Commands
 
 The four commands, the testing skill, how they ask and what they can write.

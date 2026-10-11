@@ -1,3 +1,8 @@
+---
+covers: ["src/lib/docs.mjs", "src/lib/coverage.mjs", "src/lib/frontmatter.mjs"]
+verified: 2026-10-11
+---
+
 # Docs model
 
 What Longevo keeps in a repo, how those docs stay alive, and how it works in large repos.

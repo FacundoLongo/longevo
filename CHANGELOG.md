@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-11
+
 ### Added
 
 - `longevo-testing` skill, based on Primo's testing skill, with references for Go, TypeScript, Python, Java and Kotlin, .NET, Ruby, PHP, Rust, Swift, Elixir and Convex.
@@ -16,3 +18,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 - First decisions, grouped by area: Agent Skills format, external links kept in the repo, testing skill based on Primo, drift checks anchored by date, the `longevo-` prefix and a generated coverage record.
 - Contributing guide with rules for commit messages and this changelog.
 - MIT license.
+
+[Unreleased]: https://github.com/FacundoLongo/longevo/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/FacundoLongo/longevo/releases/tag/v0.1.0

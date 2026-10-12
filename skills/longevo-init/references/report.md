@@ -43,4 +43,4 @@ The numbered list from SKILL.md section 5, each with its diff, then the question
 
 ## 8. Not checked
 
-What the script or you could not check (including the folders in `notScanned`), and the command used, so the user can repeat it.
+What the engine or you could not check (including the folders in `notScanned`), and the command used, so the user can repeat it.

@@ -1,6 +1,6 @@
 ---
 covers: ["skills/longevo-testing/**"]
-verified: 2026-10-11
+verified: 2026-10-12
 ---
 
 # Testing
@@ -24,7 +24,7 @@ verified: 2026-10-11
 ## Rules
 
 - **The repo wins.** Rules in `docs/testing.md` or AGENTS.md win over the generic guide. If a repo requires TDD, the skill works red-green.
-- **No copying bad tests.** `init` marks tests that mock storage or check internal calls, so the agent does not copy them. Existing code works as a prompt.
+- **No copying anti-golden tests.** `init` marks tests that mock storage or check internal calls, so the agent does not copy them. Agents copy the tests they see, so existing tests act as a prompt.
 - **Superpowers sets the cycle.** Its `test-driven-development` skill decides when to write tests. `longevo-testing` decides which tests and how they look.
 
 ## The bar

@@ -1,6 +1,6 @@
 ---
 covers: ["skills/*/SKILL.md", "src/lib/apply.mjs", "src/lib/docs.mjs", "src/lib/rules.mjs"]
-verified: 2026-10-12
+verified: 2026-10-12T01:07:31
 ---
 
 # How Longevo works
@@ -12,14 +12,14 @@ What happens when you run a Longevo skill, what it keeps in your repo and what i
 | Part | What it does |
 | --- | --- |
 | Skills | Plain-text instructions your agent follows: when to run, what to ask, how to judge |
-| The engine | A Node script inside each skill (`scripts/longevo.mjs`). It reads git and files and prints facts as JSON. Besides its own state in `.git/longevo`, it writes only through `apply`, and only what you picked |
+| The engine | A Node script inside each command skill (`scripts/longevo.mjs` in init, sync, brief and review). It reads git and files and prints facts as JSON. Besides its own state in `.git/longevo`, it writes only through `apply`, and only what you picked |
 | You | Answer what the code cannot answer, and pick the changes |
 
 The engine gives the same facts in every agent. The agent's model judges what they mean, for example whether a doc is still true.
 
 ## One run, step by step
 
-1. **Scan.** The engine reads the repo and prints a report. Secrets are never printed, and MCP servers are shown by name only.
+1. **Scan.** The engine reads the repo, and only the MCP server and skill names in your agents' home settings, and prints a report. Secrets are never printed.
 2. **Judge.** The model reads only the files the report points to.
 3. **Ask.** One question at a time, with options, only when the repo cannot answer it.
 4. **Propose.** A numbered list of changes, each with its diff.
@@ -29,9 +29,9 @@ The engine gives the same facts in every agent. The agent's model judges what th
 
 | File | Written by | What it is |
 | --- | --- | --- |
-| The block in AGENTS.md | The engine | A few lines between `<!-- longevo:start -->` and `<!-- longevo:end -->`: commands, the docs to read before changing some code, and the session line. Text outside it is yours |
+| The block in AGENTS.md | The engine | A few lines between `<!-- longevo:start -->` and `<!-- longevo:end -->`: commands, the testing guide, the docs to read before changing some code, the coverage record and the session line. Text outside it is yours |
 | `docs/testing.md` | The model, from a template | How tests work in this repo, and the golden tests to copy |
-| Living docs | You, then `sync` | Any doc with `covers` and `verified` in its frontmatter |
+| Living docs | You or `init` (frontmatter), then `sync` | Any doc with `covers` and `verified` in its frontmatter |
 | `docs/domain/<area>.md` | `sync`, from sources and finished briefs | Business rules with their code, test, status and WHEN/THEN scenarios |
 | `docs/work/<date>-<slug>/brief.md` | `brief` | One brief per task |
 | `docs/coverage.md`, `docs/sources.md` | The engine | Generated records. Never edit them by hand |

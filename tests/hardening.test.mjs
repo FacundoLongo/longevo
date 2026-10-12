@@ -1,5 +1,5 @@
-// Fixes from the step 2 review: writes stay inside the repo, markers are whole lines, inputs are checked,
-// hooks outside the repo are not read, drift ignores noise when it counts big commits, and declines can be undone.
+// Apply writes stay inside the repo, block markers are whole lines, apply inputs are checked, hooks outside the
+// repo are not read, drift ignores noise, and declines can be undone.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';

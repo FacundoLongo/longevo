@@ -62,7 +62,7 @@ test('a doc without a committed verified line is not stale', () => {
   assert.equal(result.living[0].stale, false);
 });
 
-test('works outside git', () => {
+test('outside git, a living doc is never stale', () => {
   const root = makeRepo({ 'docs/pay.md': DOC, 'src/pay/a.ts': '1' }, { git: false });
   const result = livingDocs(scope(root), ['docs/pay.md', 'src/pay/a.ts'], new Set());
   assert.equal(result.living[0].stale, false);
@@ -177,4 +177,12 @@ test('a file moved out of covers makes the doc stale', () => {
   gitIn(root, 'mv', 'src/pay/a.ts', 'src/billing.ts');
   gitIn(root, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', 'move');
   assert.deepEqual(docs(root).living[0].changed, ['src/pay/a.ts']);
+});
+
+test('the stale message says the code changed after the doc was verified, with the date', async () => {
+  const { docFindings } = await import('../src/lib/docs.mjs');
+  const root = makeRepo({ 'docs/pay.md': DOC, 'src/pay/a.ts': '1' });
+  commit(root, { 'src/pay/a.ts': '2' }, 'change pay');
+  const [finding] = docFindings(docs(root));
+  assert.equal(finding.message, 'docs/pay.md covers code that changed after it was verified (2026-10-01): src/pay/a.ts.');
 });

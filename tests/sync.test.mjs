@@ -49,7 +49,7 @@ test('reports a stale doc with the commits and the diff that changed its code', 
   assert.equal(report.coverage.exists, false);
 });
 
-test('works with no living docs and outside git', () => {
+test('a repo with no docs gives empty lists, in git and outside it', () => {
   for (const git of [true, false]) {
     const report = syncReport(makeRepo({ 'a.ts': '1' }, { git }), { home: '/nonexistent', today: '2026-10-11' });
     assert.deepEqual([report.docs, report.rules, report.sources, report.findings], [[], [], [], []]);
@@ -100,4 +100,9 @@ test('a rule citing a brief whose name only starts with another brief does not h
   const brief = '---\nstatus: done\ntask: "#7"\ncovers: ["src/**"]\n---\n# Brief\n';
   const root = makeRepo({ 'docs/work/2026-10-11-auth/brief.md': brief, 'src/a.ts': '1\n', 'docs/domain/auth.md': '### R-AUTH-001 · Tokens expire\nSource: docs/work/2026-10-11-auth-tokens/brief.md\nStatus: missing\n' });
   assert.deepEqual(syncReport(root, { home: root }).briefs.done.map((b) => b.path), ['docs/work/2026-10-11-auth/brief.md']);
+});
+
+test('the sources file state carries a hash of the file it would write', () => {
+  const root = makeRepo({ 'docs/a.md': '---\nsources:\n  - url: https://a\n    checked: 2026-10-01\n---\n' });
+  assert.match(syncReport(root, { home: root }).sourcesFile.hash, /^[0-9a-f]{12}$/);
 });

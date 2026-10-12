@@ -235,7 +235,7 @@ test('recognizes tests, storage mocks and single-test commands across languages'
   assert.ok(!report.findings.some((f) => f.id === 'no-single-test-command'));
 });
 
-test('the version 2 report has every new field, also outside git', () => {
+test('the version 2 report has every field, also outside git', () => {
   for (const git of [true, false]) {
     const root = makeRepo({ 'AGENTS.md': '# R\n', 'src/a.ts': '1' }, { git });
     const report = scan(root);

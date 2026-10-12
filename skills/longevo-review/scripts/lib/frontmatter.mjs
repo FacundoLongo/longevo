@@ -167,9 +167,11 @@ export function setFrontmatter(text, updates) {
   const parsed = parseFrontmatter(text);
   if (parsed.error) throw new Error(parsed.error);
   const lines = text.split('\n');
-  const eol = parsed.hasFrontmatter && lines[0].endsWith('\r') ? '\r' : '';
+  // Written lines follow the file: CRLF frontmatter, or a CRLF body when there is no frontmatter yet.
+  const crlf = parsed.hasFrontmatter ? lines[0].endsWith('\r') : text.includes('\r\n');
+  const eol = crlf ? '\r' : '';
   const rendered = Object.entries(updates).map(([key, v]) => [key, renderEntry(key, v, eol)]);
-  if (!parsed.hasFrontmatter) return `---\n${rendered.map(([, line]) => line).join('\n')}\n---\n\n${text}`;
+  if (!parsed.hasFrontmatter) return `---${eol}\n${rendered.map(([, line]) => line).join('\n')}\n---${eol}\n${eol}\n${text}`;
   const end = closingLine(lines);
   const block = lines.slice(1, end);
   for (const [key, line] of rendered) {

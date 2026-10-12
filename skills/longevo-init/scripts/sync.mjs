@@ -3,18 +3,18 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { mcpServers } from './lib/agents.mjs';
-import { localDate } from './lib/apply.mjs';
+import { localDate } from './lib/dates.mjs';
 import { generatedFiles } from './lib/attributes.mjs';
 import { coverageFor, coverageState } from './lib/coverage.mjs';
 import { docFindings, livingDocs } from './lib/docs.mjs';
 import { citedPaths, missingPaths } from './lib/paths.mjs';
-import { git, listFiles, scope } from './lib/repo.mjs';
+import { DIFF, git, listFiles, scope } from './lib/repo.mjs';
 import { findRules, ruleFindings } from './lib/rules.mjs';
 import { redactDeep } from './lib/security.mjs';
 import { declined } from './lib/state.mjs';
 import { collectSources, renderSources, SOURCES_FILE, sourceFindings } from './lib/sources.mjs';
 import { isTestFile } from './lib/tests.mjs';
-import { codeSpans, readText } from './lib/text.mjs';
+import { codeSpans, contentHash, readText } from './lib/text.mjs';
 import { briefs } from './lib/work.mjs';
 import { VERSION } from './scan.mjs';
 
@@ -47,7 +47,7 @@ export function commitsTouching(sc, anchor, files, { chunk = CHUNK } = {}) {
 
 export function diffSince(sc, anchor, files, budget, { chunk = CHUNK } = {}) {
   const lines = inChunks(files, chunk)
-    .map((part) => (git(sc.root, ['diff', '--no-ext-diff', '--no-color', '--src-prefix=a/', '--dst-prefix=b/', `${anchor}..HEAD`, '--', ...part]) ?? '').replace(/\n$/, ''))
+    .map((part) => (git(sc.root, [...DIFF, `${anchor}..HEAD`, '--', ...part]) ?? '').replace(/\n$/, ''))
     .filter(Boolean)
     .join('\n')
     .split('\n');
@@ -82,11 +82,11 @@ export function syncReport(cwd, { home = homedir(), today = localDate() } = {}) 
   return redactDeep({
     version: VERSION,
     scope: sc,
-    findings: [...docFindings(living), ...ruleFindings(sc, files, rules, files.filter(isTestFile)), ...sourceFindings(sources, today)],
+    findings: [...docFindings(living), ...ruleFindings(sc, rules, files.filter(isTestFile)), ...sourceFindings(sources, today)],
     notChecked: sc.isGit ? [] : ['drift: this folder is not a git repo, so no doc can be stale'],
     declined: declined(sc),
     coverage: coverageState(sc.root, coverageFor(sc, files, generated, { docs: living.living, rules })),
-    sourcesFile: { file: SOURCES_FILE, exists: current !== null, upToDate: current === renderSources(sources) },
+    sourcesFile: { file: SOURCES_FILE, exists: current !== null, upToDate: current === renderSources(sources), hash: contentHash(renderSources(sources)) },
     briefs: { done: work.filter((b) => b.status === 'done' && !ruled(b)), open: work.filter((b) => b.status !== 'done') },
     rules,
     sources,

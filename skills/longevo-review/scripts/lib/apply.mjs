@@ -4,7 +4,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { generatedFiles } from './attributes.mjs';
 import { MAX_BLOCK_LINES, readBlock, renderBlock, writeBlock } from './block.mjs';
 import { coverageFor, COVERAGE_FILE } from './coverage.mjs';
-import { realDate } from './dates.mjs';
+import { localDate, pad, realDate } from './dates.mjs';
 import { parseFrontmatter, setFrontmatter, setSourceChecked } from './frontmatter.mjs';
 import { matches } from './glob.mjs';
 import { IMPORTS_AGENTS, prose } from './instructions.mjs';
@@ -13,14 +13,10 @@ import { collectSources, renderSources, SOURCES_FILE } from './sources.mjs';
 import { addDeclined, removeDeclined, stateDir } from './state.mjs';
 import { BRIEF } from './work.mjs';
 
-const pad = (n) => String(n).padStart(2, '0');
-export function localDate(date = new Date()) {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
 
 // The new `verified` value. A second check on the same day adds the time, so the line still changes and its
 // commit becomes the new drift anchor (D11).
-export function nextVerified(current, date, now = new Date()) {
+function nextVerified(current, date, now = new Date()) {
   if (current === undefined || current === null || String(current).slice(0, 10) !== date) return date;
   return `${date}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 }
@@ -285,11 +281,11 @@ function brief(sc, { slug, task, covers }, { today }) {
   if (taken()) throw new Error(`${rel(sc, path)} already exists. Pick another slug.`);
   const title = slug.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
   const body = setFrontmatter(`# ${title}\n\n${BRIEF_SECTIONS.map((section) => `## ${section}\n`).join('\n')}`, { status: 'open', task, covers });
-  // The task is always quoted: issue keys like #12 would start a YAML comment.
   guardTarget(sc, path);
   mkdirSync(dirname(path), { recursive: true });
   try {
-    // wx never follows or replaces an existing path, links included.
+    // wx never follows or replaces an existing path, links included. The task is always quoted: issue keys like
+    // #12 would start a YAML comment.
     writeFileSync(path, body.replace(/^task: .*$/m, () => `task: ${JSON.stringify(task)}`), { flag: 'wx' });
   } catch (error) {
     if (error.code === 'EEXIST') throw new Error(`${rel(sc, path)} already exists. Pick another slug.`);

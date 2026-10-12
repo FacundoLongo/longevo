@@ -25,7 +25,7 @@ The reviewer gets only:
 - the brief in `brief` (its acceptance criteria and "What must not change");
 - the docs in `docsToUpdate`.
 
-Before you send it, replace every line listed in `security` with `[redacted]`; an entry with `removed: true` is a removed line, numbered as in the old file. Nothing else from this conversation, and nothing about how the code was written. If `diffLines.added` is over 3000, do not paste the diff: give the reviewer `diffCommand`, the list of files and the `security` entries, ask it to read the files one at a time, and tell it never to quote those lines.
+Before you send it, replace every line listed in `security` with `[redacted]`; an entry with `removed: true` is a removed line, numbered as in the old file, and one with `context: true` is an unchanged line that the diff shows next to a change. Nothing else from this conversation, and nothing about how the code was written. If `diffLines.added` is over 3000, do not paste the diff: give the reviewer `diffCommand`, the list of files and the `security` entries, ask it to read the files one at a time, and tell it never to quote those lines.
 
 ## 3. Send it to a fresh reviewer
 
@@ -33,7 +33,7 @@ Use a subagent with the prompt in [references/reviewer.md](references/reviewer.m
 
 ## 4. Check the findings
 
-For each finding, open the code at its `file:line` and confirm it. Drop the ones that are wrong, and say how many you dropped. Add the script's facts the reviewer may have missed: `tests` with `mocksStorage` or 3 or more `callAsserts`, `security` (file and line only), and `docsToUpdate`.
+For each finding, open the code at its `file:line` and confirm it. Drop the ones that are wrong, and say how many you dropped. Add the engine's facts the reviewer may have missed: `tests` with `mocksStorage` or 3 or more `callAsserts`, `security` (file and line only), and `docsToUpdate`.
 
 ## 5. Report
 

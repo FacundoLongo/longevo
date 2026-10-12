@@ -33,7 +33,7 @@ Each one prints `{"op", "file", "status"}` with `written` or `unchanged`, or `{"
 | Gemini setting | `gemini` |
 | `docs/testing.md` | `testing-doc` |
 | Frontmatter | `frontmatter:<doc>` |
-| Coverage record | `coverage` |
+| Coverage record | `coverage:<coverage.hash>`, so a decline lasts until the record changes |
 | Rule move | `move:<source file>:<first 40 characters of the rule>` |
 
 ## The block
@@ -61,7 +61,7 @@ Each one prints `{"op", "file", "status"}` with `written` or `unchanged`, or `{"
 
 - Move a rule only when AGENTS.md does not say it already. Keep the wording.
 - When two files disagree (npm against pnpm), keep the one the repo shows (here, the lockfile) and say why in the item. Ask before the list only when nothing in the repo settles it.
-- Remove the moved lines from the source file in the same change. If the source file has no rules left, the change deletes it; when that file is CLAUDE.md, leave the `import` item out of the list, because there is nothing left to import into.
+- Remove the moved lines from the source file in the same change. If the source file has no rules left, the change deletes it, except CLAUDE.md: keep it with only `@AGENTS.md`, so Claude Code sessions that do not read AGENTS.md by themselves still load it.
 - Leave rules that only make sense for one agent, like a Claude Code tool setting, and say why.
 
 ## Order

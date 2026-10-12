@@ -27,7 +27,7 @@ It prints JSON and needs Node 18 or newer. If Node is missing, say so and stop. 
 
 "Review this repo and tell me what to fix" is a setup, not an audit: it ends with the numbered list and the question.
 
-## 3. Check what the script cannot
+## 3. Check what the engine cannot
 
 Read only the files in `instructions.files` and check the judgment items in [references/checklist.md](references/checklist.md). Open at most 3 files from `tests.antiGoldenCandidates` to confirm or drop each candidate. Read a file from `hotspots.files` only when you need it to answer a question.
 
@@ -42,7 +42,7 @@ First ask only what the code cannot answer and the list needs, one question at a
 Then show a numbered list of changes. Each item has the file, one line on why, the diff, and a key. Leave out any change whose key is in `declined`, and if any were left out, say so in one line: "N changes are hidden because you declined them. Say 'show declined' to see them again." When the user says that, run `apply undecline` with `{"all": true}` and scan again. Build the list with [references/apply.md](references/apply.md):
 
 - **Rule moves** for each `rules-not-shared` finding: rules that AGENTS.md does not already have.
-- **`@AGENTS.md`** in CLAUDE.md for `claude-sees-only-claude-md`.
+- **`@AGENTS.md`** in CLAUDE.md for `claude-sees-only-claude-md`, and for `only-claude-md` when the block creates AGENTS.md, so Claude Code reads it too.
 - **The Gemini setting** when `gemini` is in `agents.inUse` and AGENTS.md is not in `instructions.loads.gemini`.
 - **`docs/testing.md`** from [references/testing-template.md](references/testing-template.md) when it does not exist.
 - **Frontmatter** for at most 5 docs from `docs.candidates`, starting with the areas in `hotspots.areas`. Propose only `covers` you can justify from the doc and the code.
@@ -63,11 +63,11 @@ Then show `git status --short`, so new files show too, and `git diff --stat`. Ne
 
 At most 10 lines: the commits in `session.commits`, stale docs (`doc-stale`), the current high-severity findings, and broken commands or paths. When docs are stale, suggest `longevo-sync`. The scan does not remember earlier findings, so never call a finding new. If there are no commits and nothing to report, say so in one line.
 
-If `coverage.upToDate` is false or the block should change, end with the numbered list and the same question as in section 5.
+If `coverage.upToDate` is false, the block should change, or `claude-sees-only-claude-md` is in `findings` (propose `@AGENTS.md`), end with the numbered list and the same question as in section 5.
 
 ## Questions
 
-Ask only what the code cannot answer, one question at a time, with the evidence and with options when you can. For example:
+For example:
 
 - "CI runs `turbo run test`, but AGENTS.md does not say how to run a single test. What is the command?"
 - "CLAUDE.md says Jest and AGENTS.md says Vitest, and both are installed. Which one do new tests use? [Jest / Vitest]"
@@ -79,5 +79,5 @@ Never ask what you can read in the repo. Never ask "should I continue?". No smal
 - Write only what the user picked from the list. Never stage or commit.
 - Never print a secret. Report `security` findings by file and line only.
 - MCP servers by name only. Never read or show their settings.
-- Do not run install, migrate, build or deploy commands. Run only `--help`-style commands, and only with the user's OK.
+- Do not run install, migrate, build or deploy commands. Run the repo's own tools only with `--help` or a dry run, and only with the user's OK. The engine and `git status` need no OK.
 - Keep it short. Prefer a table to paragraphs.

@@ -1,6 +1,6 @@
 ---
 covers: ["skills/*/SKILL.md", "src/lib/apply.mjs", "src/lib/block.mjs"]
-verified: 2026-10-11T23:57:20
+verified: 2026-10-12
 ---
 
 # Commands
@@ -17,7 +17,7 @@ The five skills (four commands and the testing skill), how they ask and what the
 
 ## Every command works the same way
 
-1. **Scan.** A script collects the cheap facts. The model reads only what it needs.
+1. **Scan.** The engine collects the cheap facts. The model reads only what it needs.
 2. **Ask.** Only what the code cannot answer, one question at a time, with evidence and options.
 3. **Propose.** A short report, then a numbered list of changes, each with its diff.
 4. **You pick.** One question: "Which ones do I apply? [All / Pick numbers / None]". Longevo applies only those, shows `git status --short` and `git diff --stat`, and stops. It never stages or commits ([D7](../decisions/commands.md)).
@@ -30,7 +30,7 @@ Example questions:
 
 It never asks what it can read from the repo, never asks "should I continue?" and adds no small talk.
 
-## `init` always works
+## The three moments of `init`
 
 | Moment | How it knows | What it shows |
 | --- | --- | --- |
@@ -38,7 +38,7 @@ It never asks what it can read from the repo, never asks "should I continue?" an
 | New session | There is a Longevo block | 10 lines or less: commits since the last session, stale docs, high-severity findings, broken commands and paths. A list of changes only if there is one, like an out-of-date `docs/coverage.md` |
 | Audit | You say not to change anything, or pass `--full` to the skill | The full report, with no list and no writes |
 
-The date of the last session is stored inside `.git`. You start each session with `init`; a session-start hook that only reports is planned for Claude Code, Cursor and Copilot CLI (see the [roadmap](../roadmap.md)).
+The date of the last session is stored inside `.git`. You start each session with `init`. Whether a session-start hook that only reports should run it for you is an open decision in the [roadmap](../roadmap.md).
 
 ## What `init` can write
 
@@ -74,9 +74,9 @@ The engine (`longevo.mjs apply`) writes the block, the `@AGENTS.md` line, the Ge
 
 ## `sync`: docs that follow the code
 
-A script lists living docs whose `covers` changed after the anchor (every commit counts, big ones too, see [D12](../decisions/docs.md)), `covers` that match nothing, broken paths, rules whose code or test is gone, sources not checked in 30 days and briefs marked done. For each stale doc the model reads the code diff and the doc. If the doc is still true, it proposes only a new `verified` date. If not, it proposes a small diff, or asks which one is right when the doc and the code disagree. It reads external sources only through MCP servers the agent has, and says which ones it could not check.
+The engine lists living docs whose `covers` changed after the anchor (every commit counts, big ones too, see [D12](../decisions/docs.md)), `covers` that match nothing, broken paths, rules whose code or test is gone, sources not checked in 30 days and briefs marked done. For each stale doc the model reads the code diff and the doc. If the doc is still true, it proposes only a new `verified` date. If not, it proposes a small diff, or asks which one is right when the doc and the code disagree. It reads external sources only through MCP servers the agent has, and says which ones it could not check.
 
-`sync` can write, from the list: `verified` dates, `checked` dates of sources, diffs to docs and rules, rules taken from finished briefs, `docs/sources.md` and `docs/coverage.md`. A script generates the last two.
+`sync` can write, from the list: `verified` dates, `checked` dates of sources, diffs to docs and rules, rules taken from finished briefs, `docs/sources.md` and `docs/coverage.md`. The engine generates the last two.
 
 ## `brief`: input for spec-driven development
 
@@ -98,11 +98,11 @@ A script lists living docs whose `covers` changed after the anchor (every commit
 | Spec Kit | It is the input of `/speckit-specify` |
 | Plan mode | You give it as context |
 
-When the work is done, the brief gets `status: done` and stays where it is. `sync` then moves its criteria into the rules in `docs/domain/`, with the brief as each rule's `Source`, and stops proposing that brief. Docs grow with each change.
+When the work is done, the brief gets `status: done` and stays where it is. `sync` then moves its criteria into the rules in `docs/domain/`, with the brief as each rule's `Source`, and stops proposing that brief.
 
 ## `review`: a second look before you commit
 
-It reviews the working tree and the branch commits against the merge base with the default branch. A script lists the changed files, docs whose `covers` changed but that nobody touched, rules that cite changed code, new tests that mock storage or check internal calls, the open brief and any secret in the diff. A subagent that sees only the diff, the rules, `docs/testing.md` and the brief's criteria does the review. Agents without subagents review in the same context and say so.
+It reviews the working tree and the branch commits against the merge base with the default branch. The engine lists the changed files, docs whose `covers` changed but that nobody touched, rules that cite changed code, new tests that mock storage or check internal calls, the open brief and any secret in the diff. A subagent that sees only the diff, the rules, `docs/testing.md`, the brief's criteria and the docs that cover the changed code does the review. Agents without subagents review in the same context and say so.
 
 Findings come with `file:line`: criteria without a test, rules the diff breaks, weak tests and docs to update. Doc fixes go through the list. Missing tests go to `longevo-testing`. `review` never changes code.
 

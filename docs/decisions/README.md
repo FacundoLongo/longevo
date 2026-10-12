@@ -25,7 +25,7 @@ Write one when you choose between real options, the choice changes how Longevo w
 ## Rules
 
 - **Add it to the area file it belongs to.** Create a new area file only when no area fits, and add it to this index.
-- **Use the next free ID** (D12, D13…). IDs never change and are never reused.
+- **Use the next free ID.** IDs never change and are never reused.
 - **Keep each decision under 15 lines.**
 - **Status:** Proposed, Accepted, Rejected, or Superseded by Dn.
 - **Do not edit an accepted decision.** Add a new one and change only the status line of the old one.

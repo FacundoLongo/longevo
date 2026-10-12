@@ -22,7 +22,7 @@ JSON
 | `decline` | `keys` | The keys of changes the user did not pick, inside `.git` |
 | `undecline` | `keys`, or `all: true` | Forgets declined changes, so they can be proposed again |
 
-Each one prints `{"op", "file", "status"}` with `written` or `unchanged`, or `{"error"}` and then writes nothing.
+Each one prints `{"op", "file", "status"}` with `written` or `unchanged`, or `{"error"}` and then writes nothing. `decline` and `undecline` print `declined`, the full list; outside git they print `stored: false` and a note.
 
 ## Keys
 
@@ -32,10 +32,11 @@ Each one prints `{"op", "file", "status"}` with `written` or `unchanged`, or `{"
 | Text diff in a doc | `diff:<doc>:<first 40 characters of the changed line>` |
 | Rule change or new rule | `rule:<id>:<first 12 characters of the newest commit in its doc's commits, or none>` |
 | New checked date | `checked:<doc>:<url>:<this month, YYYY-MM>` |
-| Sources file | `sources` |
-| Coverage record | `coverage` |
+| New source in a doc's frontmatter | `source:<doc>:<url>` |
+| Sources file | `sources:<sourcesFile.hash>` |
+| Coverage record | `coverage:<coverage.hash>` |
 
-Keys name the newest change under the doc, or the month for sources, so a decline lasts only until the code changes again or the month ends.
+Keys name the newest change under the doc, the month for checked dates, or the content of a generated file, so a decline lasts only until that changes.
 
 ## Order
 

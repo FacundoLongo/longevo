@@ -5,46 +5,34 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
-## [0.2.0] - 2026-10-11
+## [0.2.0] - 2026-10-12
 
 ### Added
 
-- `longevo-init` applies the changes you pick from a numbered list: the Longevo block in AGENTS.md, `@AGENTS.md` in CLAUDE.md, the Gemini CLI setting that makes it read AGENTS.md, doc frontmatter, `docs/testing.md`, rule moves between instruction files and `docs/coverage.md`. It never commits.
-- `docs/coverage.md`: tests by area and kind, and docs by area with their `verified` date.
-- The scan finds workspaces, git hotspots, pre-commit hooks, MCP server names, installed skills, rules or skills that some agents do not load, and stale docs.
-- Changes you decline are remembered inside `.git`, so `init` and `sync` do not propose them again. Say "show declined" to see them again.
 - `longevo-sync` skill: checks stale docs, business rules and external sources against the code, and applies the small fixes you pick. It never changes code and never writes to external tools.
-- `docs/sources.md`, generated from the `sources` in each doc's frontmatter, and a rules table in `docs/coverage.md`.
-- The engine finds a working git when the macOS git shim fails inside a sandbox.
-- A doc checked twice on the same day gets the time in `verified` (`2026-10-11T18:35:12`), so the second check counts.
 - `longevo-brief` skill: reads the task from text, GitHub, Linear, Jira or Notion and saves a brief with the rules, affected code, golden tests, what must not change and WHEN/THEN acceptance criteria to `docs/work/`. It never writes to the tracker.
 - `longevo-review` skill: reviews the branch and the working tree against the rules, the testing guide, the docs and the brief with a fresh reviewer, and never changes code.
+- Living docs: a doc with `covers` and `verified` in its frontmatter goes stale when a later commit changes the code it covers. A second check on the same day adds the time (`2026-10-11T18:35:12`), and big commits like squash merges count ([D11, D12](docs/decisions/docs.md)). Briefs and decisions are records and never go stale.
+- Business rules in `docs/domain/`, with their code, test, status and WHEN/THEN scenarios.
+- `docs/coverage.md` (tests, docs and rules by area) and `docs/sources.md`, both generated.
+- Changes you decline are remembered inside `.git`, so `init`, `sync` and `review` do not propose them again. Say "show declined" to list them.
+- The scan finds workspaces, git hotspots, pre-commit hooks, MCP server names, installed skills, rules or skills that some agents do not load, stale docs, and the file that defines each cited command.
+- `apply` writes only inside the repo and never into `.git`. It reads its input from stdin, or from a file with `--input <file>` for shells without heredocs.
 - Guides: [getting started](docs/guides/getting-started.md) and [how it works](docs/guides/how-it-works.md).
 
 ### Changed
 
-- The engine moved to `src/longevo.mjs`, with the `scan`, `sync`, `context`, `review`, `apply` and `coverage` commands. Each command skill carries its own copy.
-- Secret checks know more secret shapes (Stripe, Slack, Google, JWT, passwords in URLs, quoted values) and leave ordinary code and placeholders alone.
-- Briefs and decisions are records: they are never reported as stale, even with `covers`.
-- `apply` refuses to write through links that point outside the repo or into `.git`.
-- The scan report is version 2.
+- `longevo-init` applies the changes you pick from a numbered list: the Longevo block in AGENTS.md, `@AGENTS.md` in CLAUDE.md, the Gemini CLI setting that makes it read AGENTS.md, doc frontmatter, `docs/testing.md`, rule moves between instruction files and `docs/coverage.md`. It never commits. In 0.1.0 it only reported.
+- The engine is `scripts/longevo.mjs` in each command skill, with the `scan`, `sync`, `context`, `review`, `apply` and `coverage` commands. The scan report is version 2.
+- Secret checks know more shapes (Stripe, Slack, Google, JWT, passwords in URLs, quoted values, private keys over several lines) and leave ordinary code and placeholders alone. Error messages never print a secret.
 
 ### Fixed
 
-- A change that was reverted later no longer makes a doc stale; moving a file out of `covers`, a squash merge of a large change ([D12](docs/decisions/docs.md)) and moving the doc itself are handled. A new `verified` date that is not committed yet counts as a check made on that date.
-- `apply` no longer fails when the terminal leaves an empty pipe on stdin. An operation that needs input and gets none, or a block input with none of its fields, stops with a clear error instead of writing an empty block; `--input <file>` works where heredocs do not.
-- Files with CRLF line endings keep them when Longevo writes the block or `@AGENTS.md`, and block markers inside a code fence count as an example.
-- Writing a `checked` date keeps comments and the other sources as they are.
-- Frontmatter with nested maps, block text or escaped quotes is read. TOML frontmatter (`+++`) gets a clear message instead of a second frontmatter block.
-- Rules with no title, an en dash, `path#L3-L5` code refs, or a quoted or backticked test name after a path are read. Under a deeper subheading, like `#### Scenarios`, only WHEN/THEN lines count; put `Code`, `Test` and `Status` right after the rule heading.
-- A finished brief whose criteria are already rules is not proposed again.
-- `review` works in a repo with no commits yet, says why when it is on the default branch or outside git, and leaves out the changes you declined.
-- The scan reads UTF-16 instruction files, reports the ones it cannot read, and shows which package.json or Makefile defines each cited command. `pnpm vitest` and other binaries of the repo's dependencies are no longer reported as missing scripts.
-- Call assertions inside string fixtures no longer mark a test file as a bad example.
-- Secrets are redacted on removed diff lines, on `+` and `-` YAML lines in `sync` diffs, across every line of a private key and in error messages. `apply` never writes into `.git` spelled in another case, like `.GIT` on macOS.
-- Docs that start with a byte order mark work like any other, and a doc with `covers` but no `verified` date is reported.
-- Skills show `git status --short` after they write, so new files show too.
-- Clear errors for a missing folder, an option without a value, impossible dates, malformed `apply` input, `covers` that are not globs and links to folders that do not exist. Outside git, `decline` says it cannot remember instead of failing, and `sync` says drift was not checked.
+- The scan reads UTF-16 instruction files and reports the ones it cannot read.
+- `pnpm vitest` and other binaries of the repo's dependencies are not reported as missing scripts.
+- Call assertions inside string fixtures do not mark a test file as an anti-golden candidate.
+- The scan gives a clear error for a folder that does not exist or an option without a value.
+- The scan finds a working git when the macOS git shim fails inside a sandbox.
 
 ## [0.1.0] - 2026-10-11
 

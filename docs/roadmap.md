@@ -18,8 +18,8 @@ The gate of each step runs as eval cases (`claude plugin eval`) in `evals/`. The
 | Version | Ships when |
 | --- | --- |
 | 0.1.0 | Step 1 passes its gate and the install works from GitHub |
-| 0.2.0 | Steps 2, 3 and 4 pass their eval gates. They ship together, with all five commands |
-| 1.0.0 | All four gates pass on real repos, the install is verified in the five agents, `docs/guides/` covers all five and every skill has eval cases |
+| 0.2.0 | Steps 2, 3 and 4 pass their eval gates |
+| 1.0.0 | All four gates pass on real repos, the install is verified in the five agents, `docs/guides/` covers all five agents and every skill has eval cases |
 
 ## How we measure step 1
 

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { renderCoverage, testKind } from '../src/lib/coverage.mjs';
+import { renderCoverage } from '../src/lib/coverage.mjs';
+import { testKind } from '../src/lib/tests.mjs';
 import { scan } from '../src/scan.mjs';
 import { makeRepo } from './helpers/fixture.mjs';
 
@@ -52,7 +53,7 @@ test('says so when there are no tests, and adds rules when there are any', () =>
     packages: [],
     tests: [],
     docs: [],
-    rules: [{ id: 'R-PAY-001', title: 'No double charge', status: 'implemented and tested', code: 'src/a.go:10', test: 'ignores a repeated event' }],
+    rules: [{ id: 'R-PAY-001', title: 'No double charge', status: 'implemented and tested', code: [{ path: 'src/a.go', start: 10, end: 10 }], test: 'ignores a repeated event' }],
   });
   assert.match(md, /## Tests by area\n\nNo test files found\.\n/);
   assert.match(md, /\| R-PAY-001 No double charge \| implemented and tested \| src\/a\.go:10 \| ignores a repeated event \|/);
@@ -65,8 +66,11 @@ test('the same input gives the same output', () => {
 
 test('the scan says when docs/coverage.md is missing or out of date', () => {
   const root = makeRepo({ 'src/a.ts': '1', 'src/a.test.ts': 'test()', 'docs/coverage.md': '# Coverage\nold\n' });
-  assert.deepEqual(scan(root, { home: root }).coverage, { file: 'docs/coverage.md', exists: true, upToDate: false });
-  assert.deepEqual(scan(makeRepo({ 'a.ts': '1' }), { home: root }).coverage, { file: 'docs/coverage.md', exists: false, upToDate: false });
+  const { hash, ...state } = scan(root, { home: root }).coverage;
+  assert.deepEqual(state, { file: 'docs/coverage.md', exists: true, upToDate: false });
+  assert.match(hash, /^[0-9a-f]{12}$/);
+  const { hash: _, ...missing } = scan(makeRepo({ 'a.ts': '1' }), { home: root }).coverage;
+  assert.deepEqual(missing, { file: 'docs/coverage.md', exists: false, upToDate: false });
 });
 
 test('the CLI prints the record', async () => {
@@ -104,4 +108,13 @@ test('the coverage record lists the rules found in docs', async () => {
   });
   const sc = scope(root);
   assert.match(coverageFor(sc, listFiles(sc).files, new Set()), /\| R-PAY-001 No double charge \| implemented and tested \| src\/a\.ts:1, src\/b\.ts:2-4 \| x \|/);
+});
+
+test('the coverage state carries a hash of the record it would write, for decline keys', async () => {
+  const { coverageState } = await import('../src/lib/coverage.mjs');
+  const root = makeRepo({ 'a.md': '# A\n' });
+  const one = coverageState(root, '# Coverage\n\none\n');
+  assert.match(one.hash, /^[0-9a-f]{12}$/);
+  assert.equal(coverageState(root, '# Coverage\n\none\n').hash, one.hash);
+  assert.notEqual(coverageState(root, '# Coverage\n\ntwo\n').hash, one.hash);
 });

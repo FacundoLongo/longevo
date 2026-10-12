@@ -1,4 +1,4 @@
-// Fixes from the step 3 review: every write target stays inside the repo, links in both directions are one
+// Every write target stays inside the repo, links in both directions are one
 // file, redaction catches real secret shapes and leaves ordinary code alone, the sync report puts what the
 // skill needs first, rules written by the format get no false findings, and source dates are safe.
 import { test } from 'node:test';
@@ -15,7 +15,7 @@ import { sourceFindings } from '../src/lib/sources.mjs';
 import { isTestFile } from '../src/lib/tests.mjs';
 import { scan } from '../src/scan.mjs';
 import { syncReport } from '../src/sync.mjs';
-import { gitIn, makeRepo, writeFiles } from './helpers/fixture.mjs';
+import { gitIn, makeRepo } from './helpers/fixture.mjs';
 
 const read = (path) => readFileSync(path, 'utf8');
 const outsideDir = () => realpathSync(mkdtempSync(join(tmpdir(), 'longevo-out-')));
@@ -88,7 +88,7 @@ test('the sync report puts findings, declined and file states before the docs', 
 test('rules are checked against the disk, not only against the scanned file list', () => {
   const root = makeRepo({ 'docs/r.md': '### R-A-001 · x\nSource: s\nCode: src/a.ts:1\nStatus: implemented without test\n', 'src/a.ts': '1\n' });
   const rules = findRules(scope(root), listed(root));
-  assert.deepEqual(ruleFindings(scope(root), ['docs/r.md'], rules, []), []);
+  assert.deepEqual(ruleFindings(scope(root), rules, []), []);
 });
 
 test('rules written by the format get no false findings', () => {
@@ -96,7 +96,7 @@ test('rules written by the format get no false findings', () => {
   const doc = '### R-A-001 · Planned\nSource: s\nCode: src/planned.ts:1\nStatus: missing\n\n### R-A-002 · No source yet\nCode: src/a.ts:1\nStatus: no source\n';
   const root = makeRepo({ 'docs/r.md': doc, 'src/a.ts': '1\n' });
   const files = listed(root);
-  assert.deepEqual(ruleFindings(scope(root), files, findRules(scope(root), files), []), []);
+  assert.deepEqual(ruleFindings(scope(root), findRules(scope(root), files), []), []);
 });
 
 test('quoted values with comments keep their value', () => {

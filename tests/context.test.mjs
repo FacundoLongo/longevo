@@ -46,3 +46,12 @@ test('golden tests are paths, not other code names in the section', () => {
   const root = makeRepo({ ...REPO, 'tests/a.test.mjs': 'x', 'docs/testing.md': '## Golden tests\n\n- `tests/a.test.mjs`: builds a repo with `makeRepo` and `writeFiles`.\n' });
   assert.deepEqual(contextReport(root, { paths: ['src/cart/**'] }).golden, ['tests/a.test.mjs']);
 });
+
+test('an open brief for code that does not exist yet is found by the same paths', async () => {
+  const { apply } = await import('../src/lib/apply.mjs');
+  const root = makeRepo({ 'src/a.ts': '1' });
+  apply('brief', root, { slug: 'new-refunds', task: 't', covers: ['src/refunds/**'] }, { today: '2026-10-12' });
+  assert.deepEqual(contextReport(root, { paths: ['src/refunds/**'] }).briefs.map((b) => b.path), ['docs/work/2026-10-12-new-refunds/brief.md']);
+  assert.deepEqual(contextReport(root, { paths: ['src/refunds/policy.ts'] }).briefs.map((b) => b.path), ['docs/work/2026-10-12-new-refunds/brief.md']);
+  assert.deepEqual(contextReport(root, { paths: ['src/orders/**'] }).briefs, []);
+});

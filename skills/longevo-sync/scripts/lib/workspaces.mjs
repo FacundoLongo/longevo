@@ -1,10 +1,10 @@
 // Finds workspace packages for npm, yarn, pnpm, lerna, nx, turbo, Go, Cargo, uv, Gradle, Maven, .NET and Mix.
 import { join } from 'node:path';
 import { matches } from './glob.mjs';
+import { dirOf } from './paths.mjs';
 import { readText } from './text.mjs';
 
 const MANIFEST = /(^|\/)(package\.json|go\.mod|Cargo\.toml|pyproject\.toml|build\.gradle(\.kts)?|pom\.xml|[^/]+\.(?:cs|fs|vb)proj|mix\.exs|project\.json)$/;
-const dirOf = (file) => (file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '');
 const normalize = (path) => path.trim().replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/$/, '');
 const quoted = (text) => [...text.matchAll(/["']([^"']+)["']/g)].map((match) => match[1]);
 

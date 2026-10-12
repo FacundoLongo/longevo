@@ -43,13 +43,13 @@ test('a rule whose code and test exist has no findings', () => {
     'src/pay/webhook.test.ts': "test('ignores a repeated event', () => {})\n",
   });
   const files = listed(root);
-  assert.deepEqual(ruleFindings(scope(root), files, findRules(scope(root), files), ['src/pay/webhook.test.ts']), []);
+  assert.deepEqual(ruleFindings(scope(root), findRules(scope(root), files), ['src/pay/webhook.test.ts']), []);
 });
 
 test('reports code that is gone, lines past the end of the file and a missing test', () => {
   const root = makeRepo({ 'docs/domain/pay.md': RULE, 'src/pay/webhook.ts': 'a\n' });
   const files = listed(root);
-  const found = ids(ruleFindings(scope(root), files, findRules(scope(root), files), []));
+  const found = ids(ruleFindings(scope(root), findRules(scope(root), files), []));
   assert.deepEqual(found.sort(), ['rule-code-missing:docs/domain/pay.md:3', 'rule-code-moved:docs/domain/pay.md:3', 'rule-test-missing:docs/domain/pay.md:3']);
 });
 
@@ -57,7 +57,7 @@ test('reports a rule without code or test, an unknown status and duplicate ids',
   const text = '### R-A-001: Bare rule\nStatus: done\n\n### R-A-001 - Same id\nCode: a.ts:1\nSource: x\nStatus: missing\n';
   const root = makeRepo({ 'docs/a.md': text, 'a.ts': '1\n' });
   const files = listed(root);
-  const found = ids(ruleFindings(scope(root), files, findRules(scope(root), files), []));
+  const found = ids(ruleFindings(scope(root), findRules(scope(root), files), []));
   assert.ok(found.includes('rule-no-source:docs/a.md:1'), found.join());
   assert.ok(found.includes('rule-status-unknown:docs/a.md:1'), found.join());
   assert.ok(found.includes('rule-duplicate-id:docs/a.md:4'), found.join());

@@ -28,7 +28,7 @@ test('the testing skill links every stack reference', () => {
   for (const file of stacks) assert.ok(skill.includes(`(references/stacks/${file})`), `SKILL.md does not link ${file}`);
 });
 
-test('no skill or doc still calls init read-only', () => {
+test('no skill or doc calls init read-only', () => {
   for (const path of ['skills/longevo-init/SKILL.md', 'README.md', 'docs/design/commands.md', 'AGENTS.md']) {
     const text = readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
     assert.doesNotMatch(text, /read-only `?longevo-init|init is read-only|Read-only: it reports|a read-only `?longevo-init/i, path);

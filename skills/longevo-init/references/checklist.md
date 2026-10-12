@@ -1,8 +1,8 @@
 # Checklist
 
-What init reviews. The script covers the first group; you check the second group by reading the instruction files.
+What init reviews. The engine covers the first group; you check the second group by reading the instruction files.
 
-## From the script (`findings` in the JSON)
+## From the engine (`findings` in the JSON)
 
 | Finding | What it means |
 | --- | --- |
@@ -36,5 +36,5 @@ What init reviews. The script covers the first group; you check the second group
 | Contradictions between files (npm against pnpm, Jest against Vitest) | Each agent follows a different rule. Ask which one is right |
 | Pointers without a trigger ("see docs/") | Use "If you change `src/x/**`, read `docs/x.md`" |
 | The line test: "if I delete this line, does the agent behave differently?" | If not, propose to remove it |
-| Anti-golden candidates in `tests` | Confirm by reading the test; the script only guesses |
+| Anti-golden candidates in `tests` | Confirm by reading the test; the engine only guesses |
 | A stale doc (`doc-stale`) | Say it in the report; fixing the text is the job of `longevo-sync` |

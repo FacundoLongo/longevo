@@ -12,3 +12,10 @@ export function realDate(value) {
   const [h, min, s] = time.split(':').map(Number);
   return h < 24 && min < 60 && s < 60;
 }
+
+export const pad = (n) => String(n).padStart(2, '0');
+
+// Today on this machine's clock, as YYYY-MM-DD.
+export function localDate(date = new Date()) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}

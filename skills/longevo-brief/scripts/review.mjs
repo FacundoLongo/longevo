@@ -6,7 +6,7 @@ import { generatedFiles, LOCKFILE, VENDOR_DIR } from './lib/attributes.mjs';
 import { CODE_FILE } from './lib/coverage.mjs';
 import { livingDocs } from './lib/docs.mjs';
 import { matchesAny } from './lib/glob.mjs';
-import { git, gitCommand, gitInput, listFiles, scope } from './lib/repo.mjs';
+import { DIFF, git, gitCommand, gitInput, listFiles, scope } from './lib/repo.mjs';
 import { findRules } from './lib/rules.mjs';
 import { isSecretKind, lineFindings, redactDeep, securityFindings } from './lib/security.mjs';
 import { declined } from './lib/state.mjs';
@@ -16,8 +16,6 @@ import { briefs } from './lib/work.mjs';
 import { workspaces } from './lib/workspaces.mjs';
 import { VERSION } from './scan.mjs';
 
-// The user's git config must not change what the engine reads: no external diff tool, no colors, fixed prefixes.
-const DIFF = ['-c', 'core.quotePath=false', 'diff', '--no-ext-diff', '--no-color', '--src-prefix=a/', '--dst-prefix=b/'];
 const lines = (out) => (out ?? '').split('\n').filter(Boolean);
 const commitOf = (sc, ref) => git(sc.root, ['rev-parse', '--verify', '-q', `${ref}^{commit}`])?.trim() || null;
 const mergeBase = (sc, ref) => git(sc.root, ['merge-base', 'HEAD', ref])?.trim() || null;
@@ -59,10 +57,10 @@ function resolveBase(sc, base) {
   return { ref: 'HEAD', commit: head, fallback: unrelated ? 'no-merge-base' : onDefault ? 'on-default-branch' : 'no-default-branch' };
 }
 
-// The added lines (with their new numbers) and the removed lines (with their old numbers) of each file in a
-// unified diff with no context. Inside a hunk every "+" or "-" line is content, even "+++ x" or "--- x"; the
-// "--- " and "+++ " file headers come only between "diff --git" and the first "@@". A deleted file is listed
-// under its old path.
+// The added and unchanged context lines (with their new numbers) and the removed lines (with their old numbers)
+// of each file in a unified diff. Inside a hunk every "+", "-" or " " line is content, even "+++ x" or "--- x";
+// the "--- " and "+++ " file headers come only between "diff --git" and the first "@@". git ends a header with
+// a tab when the name has a space. A deleted file is listed under its old path.
 function changedLines(diff) {
   const byFile = new Map();
   let entry = null;
@@ -75,8 +73,8 @@ function changedLines(diff) {
       inHunk = false;
       entry = null;
     } else if (!inHunk && text.startsWith('+++ ') && previous.startsWith('--- ')) {
-      const file = text === '+++ /dev/null' ? previous.replace(/^--- a\//, '') : text.replace(/^\+\+\+ b\//, '');
-      entry = { added: [], removed: [] };
+      const file = (text === '+++ /dev/null' ? previous.replace(/^--- a\//, '') : text.replace(/^\+\+\+ b\//, '')).replace(/\t$/, '');
+      entry = { added: [], removed: [], context: [] };
       byFile.set(file, entry);
     } else if (entry && text.startsWith('@@')) {
       const [, from, to] = text.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)/) ?? [];
@@ -89,6 +87,10 @@ function changedLines(diff) {
     } else if (inHunk && text.startsWith('-')) {
       entry.removed.push({ line: oldLine, text: text.slice(1) });
       oldLine += 1;
+    } else if (inHunk && text.startsWith(' ')) {
+      entry.context.push({ line: newLine, text: text.slice(1) });
+      oldLine += 1;
+      newLine += 1;
     }
     previous = text;
   }
@@ -107,9 +109,7 @@ const slugOf = (path) => path.split('/')[2]?.replace(/^\d{4}-\d{2}-\d{2}-/, '') 
 export function reviewReport(cwd, { base = null } = {}) {
   const sc = scope(cwd);
   const resolved = resolveBase(sc, base);
-  // HEAD names the state reviewed, so a declined change comes back after new commits (keys end with it).
-  const head = sc.isGit ? commitOf(sc, 'HEAD')?.slice(0, 12) ?? null : null;
-  const empty = { version: VERSION, scope: sc, base: resolved, head, declined: declined(sc), changed: [], diffCommand: null, diffLines: { added: 0, removed: 0 }, docsToUpdate: [], rules: [], tests: [], code: [], brief: null, security: [], nothing: true };
+  const empty = { version: VERSION, scope: sc, base: resolved, declined: declined(sc), changed: [], diffCommand: null, diffLines: { added: 0, removed: 0 }, docsToUpdate: [], rules: [], tests: [], code: [], brief: null, security: [], nothing: true };
   if (!resolved?.commit) return redactDeep(empty);
 
   const tracked = lines(git(sc.root, [...DIFF, '--name-status', resolved.commit])).map((row) => {
@@ -154,11 +154,12 @@ export function reviewReport(cwd, { base = null } = {}) {
   const rules = findRules(sc, files).filter((rule) => coveringDocs.has(rule.doc) || rule.code.some((ref) => touched.includes(ref.path)));
 
   const security = [];
-  for (const [file, { added, removed }] of changedLines(git(sc.root, [...DIFF, '-U0', resolved.commit]) ?? '')) {
+  // The same three lines of context as diffCommand, so every line the reviewer reads is checked.
+  for (const [file, { added, removed, context }] of changedLines(git(sc.root, [...DIFF, '-U3', resolved.commit]) ?? '')) {
     if (skippedPaths.has(file)) continue;
     security.push(...lineFindings(file, added));
-    // A secret on a removed line is still in the diff the reviewer reads.
-    security.push(...lineFindings(file, removed).filter((f) => isSecretKind(f.kind)).map((f) => ({ ...f, removed: true })));
+    const secrets = (entries, mark) => lineFindings(file, entries).filter((f) => isSecretKind(f.kind)).map((f) => ({ ...f, ...mark }));
+    security.push(...secrets(removed, { removed: true }), ...secrets(context, { context: true }));
   }
   for (const { path, text } of untrackedText) security.push(...securityFindings(path, text));
 
@@ -173,7 +174,7 @@ export function reviewReport(cwd, { base = null } = {}) {
 
   // Paths are from the repo root (:(top)), so the command gives the same diff from any folder.
   const exclude = changed.filter((c) => c.skipped && !generated.has(c.path)).map((c) => `:(top,exclude,literal)${c.path}`);
-  const diffCommand = [gitCommand(), '-C', sc.root, 'diff', '--no-ext-diff', '--no-color', resolved.commit, '--', ':(top)',
+  const diffCommand = [gitCommand(), '-C', sc.root, 'diff', '--no-ext-diff', '--no-color', '-U3', resolved.commit, '--', ':(top)',
     ':(top,exclude,attr:linguist-generated)', ':(top,exclude,attr:linguist-generated=true)',
     ':(top,exclude,attr:linguist-vendored)', ':(top,exclude,attr:linguist-vendored=true)', ...exclude];
 

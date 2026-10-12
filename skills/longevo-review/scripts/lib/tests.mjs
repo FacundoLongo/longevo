@@ -74,7 +74,7 @@ const mocksStorage = (text) => codeMatches(text, STORAGE_MOCK, 'gi').length > 0;
 
 export const isTestFile = (file) => TEST_FILE.test(file) && !/(^|\/)(node_modules|vendor)\//.test(file);
 
-// One row per test file: its area, its kind and the signals that make it a bad example.
+// One row per test file: its area, its kind and the signals that make it an anti-golden candidate.
 export function analyzeTests(root, files, packages = [], maxFiles = 5000) {
   return files.filter(isTestFile).map((file, index) => {
     const text = index < maxFiles ? readText(join(root, file)) : null;

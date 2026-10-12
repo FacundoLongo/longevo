@@ -1,4 +1,5 @@
-// Findings from the whole-repo reviews: secrets in diffs and errors, .git spelled in other cases, BOMs.
+// Secrets in diffs and errors, .git in another case, byte order marks, fences, rule and source parsing, and
+// review keys.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -227,7 +228,7 @@ test('context gives how often each path changes, not only for the busiest ten fi
   assert.deepEqual(contextReport(root, { paths: ['src/f11.ts'] }).hotspots.map((h) => h.file), ['src/f11.ts']);
 });
 
-test('review says why when it is not a git repo, or on the default branch, and gives HEAD for keys', () => {
+test('review says why when it is not a git repo, or on the default branch', () => {
   const plain = makeRepo({ 'a.ts': '1' }, { git: false });
   assert.equal(reviewReport(plain).base.fallback, 'no-git');
   const root = makeRepo({ 'a.ts': '1\n' });
@@ -235,7 +236,6 @@ test('review says why when it is not a git repo, or on the default branch, and g
   writeFiles(root, { 'a.ts': '2\n' });
   const report = reviewReport(root);
   assert.equal(report.base.fallback, 'on-default-branch');
-  assert.equal(report.head, gitIn(root, 'rev-parse', 'HEAD').trim().slice(0, 12));
 });
 
 test('a removed SQL comment line is a removed line, not a file header', () => {

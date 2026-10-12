@@ -22,9 +22,14 @@ graders:
   - type: regex
     name: store-not-mocked
     target: { source: file, path: policies_test.go }
-    pattern: mock
+    pattern: 'mock|stub'
     flags: i
     match: not_contains
+  - type: regex
+    name: uses-real-store
+    target: { source: file, path: policies_test.go }
+    pattern: 'NewMemStore\(|MemStore\{'
+    match: contains
   - type: llm
     name: plan-and-run
     focus: last_message

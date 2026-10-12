@@ -6,7 +6,7 @@ import { parseFrontmatter } from './frontmatter.mjs';
 import { readText } from './text.mjs';
 
 export const SOURCES_FILE = 'docs/sources.md';
-export const SOURCE_MAX_AGE_DAYS = 30;
+const SOURCE_MAX_AGE_DAYS = 30;
 
 const byText = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 const cell = (text) => String(text).replace(/\|/g, '\\|');
@@ -25,7 +25,7 @@ export function collectSources(sc, files) {
       source.title = source.title ?? entry.title ?? null;
       source.citedBy.push(doc);
       const checked = entry.checked ?? null;
-      // The oldest check wins: a source is only as fresh as the doc that checked it last.
+      // The oldest check wins: a source is only as fresh as the doc that checked it longest ago.
       source.checked = source.checked === undefined ? checked : source.checked === null || checked === null ? null : [source.checked, checked].sort(byText)[0];
       byUrl.set(entry.url, source);
     }
@@ -33,17 +33,15 @@ export function collectSources(sc, files) {
   return [...byUrl.values()].sort((a, b) => byText(a.url, b.url));
 }
 
-const readable = realDate;
-
 export function sourceFindings(sources, today) {
   return sources
-    .filter((source) => !readable(source.checked) || daysBetween(source.checked.slice(0, 10), today) > SOURCE_MAX_AGE_DAYS)
+    .filter((source) => !realDate(source.checked) || daysBetween(source.checked.slice(0, 10), today) > SOURCE_MAX_AGE_DAYS)
     .map((source) => ({
       id: 'source-not-checked',
       severity: 'medium',
       evidence: [source.url],
       docs: source.citedBy,
-      message: readable(source.checked) ? `${source.url} was last checked on ${source.checked}.` : `${source.url} has no checked date Longevo can read.`,
+      message: realDate(source.checked) ? `${source.url} was last checked on ${source.checked}.` : `${source.url} has no checked date Longevo can read.`,
     }));
 }
 

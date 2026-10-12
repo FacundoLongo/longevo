@@ -24,4 +24,4 @@ Use only read tools. If the agent has no tool for a source, do not guess what it
 
 ## New sources
 
-When a doc or a brief links to a page that is not in any `sources`, ask: "Is <link> a source for <doc>? [Yes / No]". If yes, propose adding it to that doc's `sources` with today's date.
+When a doc or a brief links to a page that is not in any `sources`, ask: "Is <link> a source for <doc>? [Yes / No]". If yes, propose adding it to that doc's `sources` with today's date: a prose edit to the frontmatter list, in the format the other items use, with the key `source:<doc>:<url>`.

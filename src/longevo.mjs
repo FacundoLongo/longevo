@@ -55,9 +55,9 @@ export function run(argv) {
     return contextReport(args.cwd, { paths: args.paths.split(',').map((p) => p.trim()).filter(Boolean) });
   }
   if (args.command === 'apply') {
-    const raw = args.input ? readFileSync(args.input, 'utf8') : process.stdin.isTTY || NO_INPUT.has(args.rest[0]) ? '' : readStdin();
-    // No input at all is a mistake for ops that take one: an empty block would replace the user's block.
     const op = args.rest[0];
+    const raw = args.input ? readFileSync(args.input, 'utf8') : process.stdin.isTTY || NO_INPUT.has(op) ? '' : readStdin();
+    // No input at all is a mistake for ops that take one: an empty block would replace the user's block.
     if (!raw.trim() && APPLY_OPS.includes(op) && !NO_INPUT.has(op) && !OPTIONAL_INPUT.has(op)) {
       throw new Error(`apply ${op} needs its input as JSON on stdin. Pass it with a heredoc, or with --input <file>.`);
     }
@@ -69,7 +69,7 @@ export function run(argv) {
         throw new Error('The apply input is not valid JSON.');
       }
     }
-    return apply(args.rest[0], args.cwd, input);
+    return apply(op, args.cwd, input);
   }
   if (args.command === 'coverage') {
     const sc = scope(args.cwd);

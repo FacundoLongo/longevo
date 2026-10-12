@@ -12,7 +12,7 @@ import { docFindings, livingDocs } from './lib/docs.mjs';
 import { hooks as findHooks } from './lib/hooks.mjs';
 import { hotspots } from './lib/hotspots.mjs';
 import { findInstructionFiles, instructionFindings, inventory, linkedFiles, unsharedRules, whoLoads } from './lib/instructions.mjs';
-import { citedPaths, missingPaths } from './lib/paths.mjs';
+import { citedPaths, dirOf, missingPaths } from './lib/paths.mjs';
 import { chain, listFiles, scope } from './lib/repo.mjs';
 import { redactDeep, securityFindings } from './lib/security.mjs';
 import { declined, session } from './lib/state.mjs';
@@ -22,7 +22,6 @@ import { workspaces } from './lib/workspaces.mjs';
 
 export const VERSION = 2;
 
-const dirOf = (file) => (file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '');
 
 export function scan(cwd, { markSession = false, home = homedir() } = {}) {
   const sc = scope(cwd);

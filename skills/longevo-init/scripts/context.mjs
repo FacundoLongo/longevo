@@ -3,6 +3,7 @@
 import { join } from 'node:path';
 import { generatedFiles } from './lib/attributes.mjs';
 import { COVERAGE_FILE } from './lib/coverage.mjs';
+import { dirOf } from './lib/paths.mjs';
 import { livingDocs } from './lib/docs.mjs';
 import { matches, matchesAny } from './lib/glob.mjs';
 import { hotspots } from './lib/hotspots.mjs';
@@ -16,17 +17,20 @@ import { workspaces } from './lib/workspaces.mjs';
 import { VERSION } from './scan.mjs';
 
 const MAX_NEAR = 20;
-const dirOf = (file) => (file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '');
 const stem = (file) => file.split('/').pop().replace(/\.[^.]+$/, '').replace(/[._-](test|spec)$/i, '').replace(/^test_/i, '').replace(/_test$/i, '').replace(/Tests?$|IT$/, '').toLowerCase();
 
 // Backticked paths in the "Golden tests" section of docs/testing.md.
-export function goldenTests(root, files = null) {
+function goldenTests(root, files) {
   const text = readText(join(root, 'docs', 'testing.md')) ?? '';
   const section = text.split(/^## /m).find((part) => /^Golden tests\b/i.test(part)) ?? '';
   // Only paths: a test name or a helper like `makeRepo` in the same bullet is not a golden test.
   const names = [...section.matchAll(/`([^`\s]+)`/g)].map((match) => match[1]).filter((name) => name.includes('/') || /\.[a-z]{1,5}$/i.test(name));
-  return files ? names.filter((name) => files.includes(name) && isTestFile(name)) : names;
+  return names.filter((name) => files.includes(name) && isTestFile(name));
 }
+
+// Two globs can match the same file when the fixed part of one starts with the fixed part of the other.
+const fixedPart = (glob) => glob.split(/[*?[{]/)[0];
+const overlaps = (a, b) => fixedPart(a).startsWith(fixedPart(b)) || fixedPart(b).startsWith(fixedPart(a));
 
 export function contextReport(cwd, { paths = [] } = {}) {
   const sc = scope(cwd);
@@ -72,6 +76,7 @@ export function contextReport(cwd, { paths = [] } = {}) {
     coverage,
     // Every file's count, not only the busiest ten in the repo, then only the paths of this task.
     hotspots: hotspots(sc, files, packages, { generated, limit: Infinity }).files.filter((hot) => touches(hot.file)),
-    briefs: briefs(sc, files).filter((brief) => brief.status !== 'done' && targets.some((file) => matchesAny(file, brief.covers))).map(({ path, status, task }) => ({ path, status, task })),
+    // A brief may cover code that does not exist yet, so its globs are also compared with the paths asked for.
+    briefs: briefs(sc, files).filter((brief) => brief.status !== 'done' && (targets.some((file) => matchesAny(file, brief.covers)) || paths.some((path) => brief.covers.some((cover) => overlaps(path, cover))))).map(({ path, status, task }) => ({ path, status, task })),
   });
 }

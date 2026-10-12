@@ -35,7 +35,7 @@ test('reviews the branch against main, with untracked files', () => {
   assert.deepEqual(report.diffLines, { added: 5, removed: 1 });
 });
 
-test('counts untracked files', () => {
+test('lists untracked files with the status untracked', () => {
   const report = reviewReport(branch());
   assert.ok(report.changed.some((c) => c.path === 'src/refunds/policy.test.ts' && c.status === 'untracked'));
 });
@@ -104,4 +104,24 @@ test('a repo with no commits yet reviews its files against an empty tree', () =>
   assert.equal(report.base.fallback, 'no-commits');
   assert.deepEqual(report.changed.map((c) => `${c.path}:${c.status}`), ['src/a.ts:added', 'src/b.ts:untracked']);
   assert.equal(report.diffLines.added, 2);
+});
+
+test('a secret on an unchanged line the reviewer sees in the diff is listed as context', () => {
+  const root = makeRepo({ 'conf.py': 'a = 1\nb = 2\nc = 3\npassword = "hunter2hunter2"\nd = 4\ne = 5\nf = 6\n' });
+  gitIn(root, 'branch', '-M', 'main');
+  gitIn(root, 'checkout', '-q', '-b', 'tweak');
+  writeFiles(root, { 'conf.py': 'a = 1\nb = 2\nc = 3\npassword = "hunter2hunter2"\nd = 4\ne = 50\nf = 6\n' });
+  gitIn(root, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qam', 'Change e');
+  const report = reviewReport(root);
+  assert.deepEqual(report.security, [{ file: 'conf.py', line: 4, kind: 'secret value', context: true }]);
+  assert.ok(report.diffCommand.includes('-U3'));
+});
+
+test('a file name with a space keeps its name in the security list and in the skip check', () => {
+  const root = makeRepo({ '.gitattributes': 'gen/** linguist-generated=true\n', 'my file.txt': 'x\n', 'gen/api client.ts': 'x\n' });
+  gitIn(root, 'branch', '-M', 'main');
+  gitIn(root, 'checkout', '-q', '-b', 'secrets');
+  writeFiles(root, { 'my file.txt': 'x\npassword = "hunter2hunter2"\n', 'gen/api client.ts': 'x\npassword = "hunter2hunter2"\n' });
+  gitIn(root, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qam', 'Add');
+  assert.deepEqual(reviewReport(root).security.map((s) => s.file), ['my file.txt']);
 });

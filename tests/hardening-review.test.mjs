@@ -1,5 +1,5 @@
-// Fixes from the step 4 reviews: redaction recall, review against the real merge base and safe from git
-// config, renames, lockfiles, near tests ranked before the cut, untracked tests, briefs for new code.
+// Redaction recall, review against the real merge base and safe from git config, renames, lockfiles, near
+// tests ranked before the cut, untracked tests, and briefs for new code.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -16,7 +16,7 @@ import { gitIn, makeRepo, writeFiles } from './helpers/fixture.mjs';
 const commit = (root, message) => gitIn(root, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qam', message);
 const listed = (root) => gitIn(root, 'ls-files').split('\n').filter(Boolean);
 
-test('redaction catches secrets the first list caught', () => {
+test('redaction catches secret words in names, like SECRET_KEY, db_password and api_token', () => {
   for (const line of ['SECRET_KEY = "django-insecure-abc123def456"', 'STRIPE_SECRET_KEY = "abcdefgh12345678"', 'db_password: hunter2hunter2', 'POSTGRES_PASSWORD: hunter2hunter2', 'client_secret: abcdefgh12345678', 'api_token: abcdefgh12345678', 'db.password=hunter2hunter2']) {
     assert.match(redact(line), /\[redacted\]/, line);
   }
@@ -124,7 +124,7 @@ test('a rule test written but not added to git yet is found', () => {
   const root = makeRepo({ 'docs/r.md': '### R-A-001 · x\nSource: s\nCode: a.ts:1\nTest: "handles the new case"\nStatus: implemented and tested\n', 'a.ts': '1\n' });
   writeFiles(root, { 'a.test.ts': "test('handles the new case', () => {})\n" });
   const files = [...listed(root), 'a.test.ts'];
-  assert.deepEqual(ruleFindings(scope(root), files, findRules(scope(root), files), ['a.test.ts']), []);
+  assert.deepEqual(ruleFindings(scope(root), findRules(scope(root), files), ['a.test.ts']), []);
 });
 
 test('a brief can cover code that does not exist yet, and never writes through a link', () => {

@@ -1,4 +1,4 @@
-// Edge cases from the deferred minors of PR #1 and PR #3: CLI input, apply input and links.
+// Edge cases of CLI options, apply input and links.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';

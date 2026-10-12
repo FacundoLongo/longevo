@@ -52,6 +52,10 @@ export function gitInput(cwd, args, input) {
   }
 }
 
+// git diff flags that the user's git config cannot change: no external diff tool, no colors, fixed prefixes,
+// and paths as they are.
+export const DIFF = ['-c', 'core.quotePath=false', 'diff', '--no-ext-diff', '--no-color', '--src-prefix=a/', '--dst-prefix=b/'];
+
 export function scope(cwd) {
   let dir = resolve(cwd);
   try {

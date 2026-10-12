@@ -1,5 +1,6 @@
-import { lstatSync, realpathSync, statSync } from 'node:fs';
+import { realpathSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { dirOf } from './paths.mjs';
 import { git } from './repo.mjs';
 import { fenceKinds, unreadableReason } from './text.mjs';
 
@@ -16,13 +17,12 @@ const PATTERNS = [
 ];
 
 const base = (file) => file.split('/').pop();
-const dirOf = (file) => (file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '');
 
 // An @AGENTS.md import in CLAUDE.md, also written as @./AGENTS.md or @../AGENTS.md.
 export const IMPORTS_AGENTS = /(^|\s)@(?:\.{1,2}\/)*AGENTS\.md\b/m;
 
 // The folder an instruction file applies to: .cursor/rules, .github and .claude belong to their parent.
-export function ownerDir(file) {
+function ownerDir(file) {
   return dirOf(file)
     .replace(/(^|\/)\.cursor\/rules(\/.*)?$/, '')
     .replace(/(^|\/)\.github(\/instructions)?$/, '')

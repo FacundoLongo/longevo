@@ -97,3 +97,7 @@ test('replacing a key with block text or a list with blank lines leaves no orpha
   assert.equal(out, '---\nverified: 2026-10-11\ncovers: ["c/**"]\ntitle: x\n---\n');
   assert.equal(parseFrontmatter(out).error, null);
 });
+
+test('new frontmatter on a CRLF doc uses CRLF too', () => {
+  assert.equal(setFrontmatter('# CRLF\r\n\r\nText.\r\n', { verified: '2026-10-12' }), '---\r\nverified: 2026-10-12\r\n---\r\n\r\n# CRLF\r\n\r\nText.\r\n');
+});

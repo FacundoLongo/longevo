@@ -1,7 +1,7 @@
 // The Longevo block in AGENTS.md: a few lines between two markers. Text outside the markers is never touched.
 import { fenceKinds } from './text.mjs';
 
-export const START = '<!-- longevo:start -->';
+const START = '<!-- longevo:start -->';
 export const END = '<!-- longevo:end -->';
 export const MAX_BLOCK_LINES = 12;
 

@@ -24,7 +24,7 @@
 Longevo is a small set of agent skills. It helps coding agents write tests that catch real bugs, and it keeps your docs true to the code.
 
 > [!NOTE]
-> Longevo 0.2 is a preview: all five commands work, and each one passed its eval gate. 1.0 comes after use on real repos and in all five agents. See the [roadmap](docs/roadmap.md).
+> Longevo 0.2 is a preview: all five skills work, and each one passed its eval gate. 1.0 comes after use on real repos and in all five agents. See the [roadmap](docs/roadmap.md).
 
 ## Why
 
@@ -46,30 +46,23 @@ Longevo does not replace your agent or your workflow. It improves what the agent
 | `/longevo-brief` | Collects the rules, code, docs and tests for one task into a brief in `docs/work/`, as input for spec-driven development. |
 | `/longevo-review` | Reviews your changes against the rules, the testing guide, the docs and the brief, with a reviewer that did not write them. |
 
-The four commands work the same way:
-
-1. **Scan** the repo first.
-2. **Ask** only what the code cannot answer, one question at a time.
-3. **Propose** changes as diffs.
-4. **You pick** which changes to apply. Longevo writes only those, never commits, and keeps its own state inside `.git`.
-
-It never writes to Notion, Confluence, Jira or Linear: it reads them through your agent's MCP servers and keeps only the links in the repo. Secrets it finds are reported by file and line, never printed.
+Each of the four commands scans the repo first, asks only what the code cannot answer, and proposes changes as diffs. Longevo writes only the changes you pick, never stages or commits, and keeps its own state inside `.git`. It reads Notion, Confluence, Jira or Linear through your agent's MCP servers, keeps only the links in the repo and never writes to those tools. Its reports name secrets by file and line, never by value. See [how it works](docs/guides/how-it-works.md).
 
 ## Install
 
-One command for every agent (needs Node 18 or newer):
+One command for every agent (needs Node 18 or newer; stale-doc checks and `review` also need a git repo):
 
 ```bash
 npx skills add FacundoLongo/longevo -g
 ```
 
-Then open your agent in a repo and run `/longevo-init` (`$longevo-init` in Codex).
+Then open your agent in a repo and run `/longevo-init`: `$longevo-init` in Codex, `/longevo:longevo-init` after the Claude Code plugin install, and pick it from `/skills` in Gemini CLI.
 
-The plugin installers for Claude Code, Gemini CLI and Copilot CLI, the first run and a working day are in [getting started](docs/guides/getting-started.md). To see what happens inside, read [how it works](docs/guides/how-it-works.md).
+The plugin installers for Claude Code, Gemini CLI and Copilot CLI, the first run and a working day are in [getting started](docs/guides/getting-started.md).
 
 ## Works with
 
-Longevo uses the [Agent Skills](https://agentskills.io/specification) format, so the same skills work in **Claude Code**, **Codex**, **Cursor**, **Gemini CLI** and **GitHub Copilot**. See [agents](docs/design/agents.md).
+Longevo uses the [Agent Skills](https://agentskills.io/specification) format, so the same skills work in **Claude Code**, **Codex**, **Cursor**, **Gemini CLI** and **GitHub Copilot CLI**. See [agents](docs/design/agents.md).
 
 ## Roadmap
 
@@ -80,7 +73,7 @@ Longevo uses the [Agent Skills](https://agentskills.io/specification) format, so
 | 3 | Living docs: `sync`, drift checks and external sources |
 | 4 | `brief` and `review` |
 
-Each step passed its eval gate; use on real repos and in all five agents comes before 1.0. Details in the [roadmap](docs/roadmap.md).
+Details in the [roadmap](docs/roadmap.md).
 
 ## Contributing
 

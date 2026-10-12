@@ -1,6 +1,6 @@
 ---
 covers: ["src/lib/docs.mjs", "src/lib/coverage.mjs", "src/lib/frontmatter.mjs", "src/lib/rules.mjs", "src/lib/sources.mjs"]
-verified: 2026-10-11T23:57:20
+verified: 2026-10-12
 ---
 
 # Docs model
@@ -42,13 +42,19 @@ verified: 2026-10-11          # the anchor is the commit that changed this line
 ---
 ```
 
-When files in `covers` change after the anchor commit, the doc is stale. A change that was reverted later does not count, and moving a file out of `covers` does. Moving the doc keeps its anchor, and a doc with `covers` but no `verified` is reported until it gets a first date. A new `verified` date that is not committed yet counts as a check made on that date when it is later than the committed one; a date without a time covers the whole day. `init` shows stale docs in the session update, and `sync` proposes the fix. See [D11](../decisions/docs.md). Longevo reads YAML frontmatter only; a doc with TOML frontmatter (`+++`) cannot be a living doc.
+When files in `covers` change after the anchor commit, the doc is stale ([D11](../decisions/docs.md), [D12](../decisions/docs.md)). `init` shows stale docs in the session update, and `sync` proposes the fix.
+
+- A change that was reverted later does not count. Moving a file out of `covers` does.
+- Moving the doc keeps its anchor.
+- A doc with `covers` but no `verified` is reported until it gets a first date.
+- A new `verified` date that is not committed yet counts as a check on that date, when it is later than the committed one. A date without a time covers the whole day.
+- Longevo reads YAML frontmatter only. A doc with TOML frontmatter (`+++`) cannot be a living doc.
 
 `init` proposes this frontmatter for at most five existing docs per run, starting with the areas that change most. It leaves decisions, ADRs and changelogs alone.
 
 ## Coverage record
 
-A script generates `docs/coverage.md` ([D8](../decisions/docs.md)). Nobody edits it by hand, and `init` proposes an update when its content would change.
+The engine generates `docs/coverage.md` ([D8](../decisions/docs.md)). Nobody edits it by hand, and `init` proposes an update when its content would change.
 
 | Table | What it shows |
 | --- | --- |
@@ -62,7 +68,7 @@ An area is a workspace package, or a top-level folder in a repo without workspac
 
 ```markdown
 ### R-PAY-003 · A duplicate event never charges twice
-Source: Notion · Billing policy (checked 2026-10-11)
+Source: Billing policy (Notion)
 Code: src/payments/webhook.ts:41-77
 Test: "ignores a webhook with an event_id already processed"
 Status: implemented and tested
@@ -93,7 +99,7 @@ Links to Notion, Confluence, Jira or Linear live only in the repo. Longevo never
 
 Longevo finds MCP servers in two ways: it reads the config of each agent (names only, never credentials), and it checks which tools the agent has in the session. Agents without MCP servers bring nothing new, but they still use the rules already in the repo.
 
-A script generates `docs/sources.md` from the `sources` in each doc's frontmatter: each source, the docs that cite it and the oldest date one of them checked it. Whether a source changed at the origin is shown when `sync` runs, not stored.
+The engine generates `docs/sources.md` from the `sources` in each doc's frontmatter: each source, the docs that cite it and the oldest date one of them checked it. Whether a source changed at the origin is shown when `sync` runs, not stored.
 
 ## Large repos
 

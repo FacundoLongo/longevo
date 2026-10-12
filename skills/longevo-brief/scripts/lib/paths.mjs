@@ -5,7 +5,8 @@ const PATH_LIKE = /^(?:\.{1,2}\/)?[\w.@-]+(?:\/[\w.@-]+)*\/?$/;
 const EXTENSION = /\.(md|mdx|json|ya?ml|toml|ts|tsx|js|jsx|mjs|cjs|go|py|rb|rs|swift|kt|java|sql|sh|txt)$/;
 const MIME_TYPE = /^(?:application|text|image|audio|video|multipart|font)\/[\w.+-]+$/;
 const DOMAIN = /^[\w-]+(?:\.[\w-]+)+\//;
-const dirOf = (file) => (file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '');
+// The folder of a repo path, or '' at the root.
+export const dirOf = (file) => (file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '');
 
 export function citedPaths(spans) {
   return spans

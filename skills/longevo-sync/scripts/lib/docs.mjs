@@ -40,7 +40,7 @@ function anchorOf(sc, doc) {
 // Files matching `covers` in commits after the anchor, without noise, that still differ from the anchor: a change
 // that was reverted later does not count. Big commits count too, so a squash merge of a large change is not missed
 // (D12). With `since`, only commits dated after it count. Docs verified in the same commit share one walk.
-export function changedSince(sc, anchor, covers, generated, walks = new Map(), { since = null } = {}) {
+function changedSince(sc, anchor, covers, generated, walks = new Map(), { since = null } = {}) {
   const key = `${anchor} ${since ?? ''}`;
   if (!walks.has(key)) {
     const after = since ? new Date(since.length === 10 ? `${since}T23:59:59` : since).getTime() / 1000 : -Infinity;
@@ -98,7 +98,7 @@ export function docFindings(docs) {
     if (doc.stale) {
       const shown = doc.changed.slice(0, 3).join(', ');
       const more = doc.changed.length > 3 ? ` and ${doc.changed.length - 3} more` : '';
-      findings.push({ id: 'doc-stale', severity: 'medium', evidence: [doc.path], message: `${doc.path} covers code that changed after ${doc.verified}: ${shown}${more}.` });
+      findings.push({ id: 'doc-stale', severity: 'medium', evidence: [doc.path], message: `${doc.path} covers code that changed after it was verified (${doc.verified}): ${shown}${more}.` });
     }
     if (!doc.verified) {
       findings.push({ id: 'doc-not-verified', severity: 'low', evidence: [doc.path], message: `${doc.path} has covers but no verified date, so Longevo cannot tell whether it is stale.` });

@@ -8,7 +8,7 @@ This folder explains how Longevo works, what comes next and why we chose it. Eve
 | --- | --- |
 | [guides/getting-started.md](guides/getting-started.md) | How to install Longevo, set up a repo and use it every day |
 | [guides/how-it-works.md](guides/how-it-works.md) | What a run does, what Longevo keeps in your repo and what it never does |
-| [design/overview.md](design/overview.md) | What Longevo is, the problem, the principles and a working day |
+| [design/overview.md](design/overview.md) | What Longevo is, the problem and the principles |
 | [design/commands.md](design/commands.md) | The commands, how they ask and what they can write |
 | [design/docs-model.md](design/docs-model.md) | What Longevo keeps in a repo, external sources and large repos |
 | [design/checks.md](design/checks.md) | How Longevo reviews AGENTS.md and compares docs with code |

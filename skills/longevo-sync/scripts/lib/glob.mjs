@@ -1,7 +1,7 @@
 // Git pathspec globs, as used in `covers`: `*` and `?` stay inside one folder, `**` crosses folders.
 const SPECIAL = /[.+^${}()|[\]\\]/;
 
-export function globToRegExp(pattern) {
+function globToRegExp(pattern) {
   const p = pattern.replace(/^\.\//, '');
   let out = '';
   for (let i = 0; i < p.length;) {

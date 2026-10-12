@@ -22,10 +22,10 @@ How to report what the reviewer found, after you checked each finding against th
 | --- | --- | --- |
 | A rule broken or bent | high | Reviewer, with the rule id |
 | An acceptance criterion or "must not change" item without a test | high | Reviewer, with the brief |
-| A secret in an added line | high | Script (`security`), file and line only; never quote it |
-| A personal path or an "install from the internet" line | medium | Script (`security`), file and line only |
-| A test that mocks storage or checks internal calls | medium | Script (`tests`) and reviewer |
-| A doc that no longer matches the code | medium | Script (`docsToUpdate`) and reviewer |
+| A secret in the diff | high | Engine (`security`), file and line only; never quote it |
+| A personal path or an "install from the internet" line | medium | Engine (`security`), file and line only |
+| A test that mocks storage or checks internal calls | medium | Engine (`tests`) and reviewer |
+| A doc that no longer matches the code | medium | Engine (`docsToUpdate`) and reviewer |
 | A bug at a boundary | medium or high | Reviewer |
 | Clarity | low | Reviewer |
 

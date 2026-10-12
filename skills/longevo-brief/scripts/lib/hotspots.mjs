@@ -3,7 +3,7 @@ import { generatedFiles, isNoise } from './attributes.mjs';
 import { git } from './repo.mjs';
 import { areaOf } from './tests.mjs';
 
-export const MAX_COMMIT_FILES = 100;
+const MAX_COMMIT_FILES = 100;
 
 export function commitsSince(sc, { range, since } = {}) {
   if (!sc.isGit) return [];

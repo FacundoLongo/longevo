@@ -26,7 +26,7 @@ Search the repo for the names, routes, models and messages in the task. List the
 node <this skill's folder>/scripts/longevo.mjs context --cwd . --paths "src/refunds/**,src/payments/charge.ts"
 ```
 
-Quote the list, so the shell does not expand the globs.
+Quote the list, so the shell does not expand the globs. Paths are relative to the repo root, not to the folder you are in.
 
 It returns the docs and rules that cover those paths, the tests near them, the golden tests from `docs/testing.md`, their coverage rows, how often they change and open briefs. Read only what it points to. If an open brief already covers the same code, say so and ask whether to continue that one.
 
@@ -66,7 +66,7 @@ If the user picks it:
 2. Fill its sections with your edit tool, exactly as you showed them.
 3. Show the path.
 
-Never stage or commit. If the user does not pick it, save nothing; the brief was shown, and asking for it again shows it again.
+Never stage or commit. If the user does not pick it, save nothing. The user can ask to see the brief again.
 
 ## 7. Next step
 

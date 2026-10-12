@@ -15,7 +15,7 @@ Longevo is a preview. Questions and ideas are welcome as issues. Read the [docs]
 Each skill has eval cases in `evals/`. A case gives an agent a small repo, a task and graders, and runs it with and without Longevo, so the report shows what the skill adds. They are the gate of each roadmap step.
 
 ```bash
-claude plugin eval . --scaffold --allow-tools Bash Write Edit --runs 1 --no-publish
+claude plugin eval . --trust-plugin --scaffold --allow-tools Bash Write Edit Agent --runs 1 --no-publish
 ```
 
 They run real agents on your account, so they cost tokens; add `--max-cost-usd 5` to set a limit. Results go to `evals/results/`, which git ignores. Change a skill only if its evals still pass, and add a case when you add a behavior.

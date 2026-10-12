@@ -17,7 +17,7 @@ Longevo is a small set of agent skills. It improves what a coding agent reads an
 | Longevo does | Longevo does not |
 | --- | --- |
 | Review any repo or folder and propose fixes | Run your process or replace Superpowers |
-| Keep docs alive and check them against the code | Add gates. A session-start hook that only reports is planned, and optional |
+| Keep docs alive and check them against the code | Add gates. A session-start hook that only reports is an open decision |
 | Bring business rules from external tools into the repo | Copy external pages. It keeps short rules with a link |
 | Make agents write fewer, better tests | Write anything without your OK |
 | Prepare a brief for each task | Do spec-driven development itself |
@@ -46,14 +46,7 @@ This follows the model of guides and sensors by Birgitta Böckeler.
 
 ## A working day
 
-1. Open the agent. `/longevo-init` tells you in 10 lines what changed and what is stale.
-2. Take a task. If it has some size, `/longevo-brief` collects rules, code and tests, and asks what is missing.
-3. Design and plan with your usual tool, with the brief as input.
-4. The agent builds. `longevo-testing` starts by itself when it writes tests.
-5. Before you commit, `/longevo-review` checks the diff.
-6. When you finish, `/longevo-sync` proposes small fixes to the docs. You approve what goes in.
-
-A small change needs only steps 1, 4 and 6.
+See [getting started](../guides/getting-started.md#a-working-day). A small change needs only `init`, `longevo-testing` and `sync`.
 
 ## Sources
 

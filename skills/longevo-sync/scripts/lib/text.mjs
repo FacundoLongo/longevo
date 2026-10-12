@@ -1,4 +1,8 @@
+import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync, statSync } from 'node:fs';
+
+// A short, stable name for a text, used in the decline keys of generated files.
+export const contentHash = (text) => createHash('sha1').update(text).digest('hex').slice(0, 12);
 
 // UTF-16 with a byte order mark is decoded; files over the limit or with NUL bytes are not text to Longevo.
 function decode(buffer) {

@@ -1,6 +1,6 @@
 ---
 covers: ["src/lib/agents.mjs", "src/lib/instructions.mjs", ".claude-plugin/**", ".codex-plugin/**", ".cursor-plugin/**", "gemini-extension.json"]
-verified: 2026-10-11T23:57:20
+verified: 2026-10-12
 ---
 
 # Agents
@@ -20,7 +20,7 @@ We checked this table against each agent's official docs on 2026-10-11. `longevo
 ## Notes
 
 - **Names start with `longevo-`** because most agents keep all skills in one namespace, and Claude Code already has `/init` and `/review` ([D2](../decisions/packaging.md)).
-- **Install:** see the [README](../../README.md#install).
+- **Install:** see [getting started](../guides/getting-started.md#install).
 - **MCP is what changes between agents.** External sources work only where MCP servers are set up. What comes in stays in the repo, so every agent can use it.
 - **One folder does not reach all five.** `.agents/skills` reaches Codex, Cursor, Gemini CLI and Copilot, but not Claude Code. A repo skill needs a copy in `.claude/skills` too.
 - **Gemini CLI ignores `.gemini/settings.json`** in folders you have not trusted.

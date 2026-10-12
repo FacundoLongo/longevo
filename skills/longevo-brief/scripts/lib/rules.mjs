@@ -6,7 +6,7 @@ import { git } from './repo.mjs';
 import { isTestFile } from './tests.mjs';
 import { fenceKinds, readText } from './text.mjs';
 
-export const RULE_STATUSES = ['implemented and tested', 'implemented without test', 'missing', 'contradicts', 'no source'];
+const RULE_STATUSES = ['implemented and tested', 'implemented without test', 'missing', 'contradicts', 'no source'];
 
 const HEADING = /^(#{2,4})\s+(R-[A-Z0-9]+-\d+)(?:\s*(?:·|—|–|-|:)\s*(.*?))?\s*$/;
 const FIELD = /^(Source|Code|Test|Status):\s*(.*)$/i;
@@ -20,7 +20,6 @@ function parseCode(value) {
   });
 }
 
-// The test name: the first quoted or backticked part, so a line like `name` in tests/x.test.ts still works.
 // The test name: a double-quoted part, then a backticked part that is not a file path, then a single-quoted part
 // that no letter touches (so the apostrophes in "doesn't" stay in the name), then the whole line.
 const PATH_LIKE = /\/|\.(?:[cm]?[jt]sx?|py|go|rb|java|kt|cs|php|rs|swift|exs?|dart)$/;
@@ -75,7 +74,9 @@ export function findRules(sc, files) {
   return files.filter(RULE_DOC).sort().flatMap((doc) => parseRules(doc, readText(join(sc.root, doc)) ?? ''));
 }
 
-export function ruleFindings(sc, files, rules, testFiles, { maxTestFiles = 5000 } = {}) {
+const MAX_TEST_FILES = 5000;
+
+export function ruleFindings(sc, rules, testFiles) {
   let testTexts = null;
   // In a git repo, git grep searches every tracked file, so a large repo is never cut short. Docs do not count.
   const testFound = (name) => {
@@ -83,7 +84,7 @@ export function ruleFindings(sc, files, rules, testFiles, { maxTestFiles = 5000 
       const hits = git(sc.root, ['grep', '-F', '-l', '--untracked', '-e', name, '--', '.', ':(exclude)*.md', ':(exclude)*.mdx']) ?? '';
       return hits.split('\n').some((file) => file && isTestFile(file));
     }
-    testTexts ??= testFiles.slice(0, maxTestFiles).map((file) => readText(join(sc.root, file)) ?? '');
+    testTexts ??= testFiles.slice(0, MAX_TEST_FILES).map((file) => readText(join(sc.root, file)) ?? '');
     return testTexts.some((text) => text.includes(name));
   };
   const exists = (path) => existsSync(join(sc.root, path));

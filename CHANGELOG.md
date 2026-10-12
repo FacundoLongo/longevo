@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-11
+
 ### Added
 
 - `longevo-init` applies the changes you pick from a numbered list: the Longevo block in AGENTS.md, `@AGENTS.md` in CLAUDE.md, the Gemini CLI setting that makes it read AGENTS.md, doc frontmatter, `docs/testing.md`, rule moves between instruction files and `docs/coverage.md`. It never commits.
@@ -57,5 +59,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 - Contributing guide with rules for commit messages and this changelog.
 - MIT license.
 
-[Unreleased]: https://github.com/FacundoLongo/longevo/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/FacundoLongo/longevo/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/FacundoLongo/longevo/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/FacundoLongo/longevo/releases/tag/v0.1.0

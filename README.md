@@ -12,6 +12,8 @@
 </p>
 
 <p align="center">
+  <a href="docs/guides/getting-started.md">Getting started</a> ·
+  <a href="docs/guides/how-it-works.md">How it works</a> ·
   <a href="docs/design/overview.md">Overview</a> ·
   <a href="docs/design/commands.md">Commands</a> ·
   <a href="docs/roadmap.md">Roadmap</a> ·
@@ -36,20 +38,22 @@ Longevo does not replace your agent or your workflow. It improves what the agent
 
 ## Commands
 
-| Command | What it does | In 0.2 |
-| --- | --- | --- |
-| `/longevo-init` | The first time: reviews the repo and its AGENTS.md, and applies the changes you pick so every agent sees the same rules. Every session after that: a short update. | Yes |
-| `longevo-testing` | Runs by itself when the agent writes tests. Based on [Primo's testing skill](https://github.com/primo-devs/public-skills). | Yes |
-| `/longevo-sync` | Compares docs with the code and with external sources, and applies the small fixes you pick. | Yes |
-| `/longevo-brief` | Collects the rules, code, docs and tests for one task into a brief in `docs/work/`, as input for spec-driven development. | Yes |
-| `/longevo-review` | Reviews your changes against the rules, the testing guide, the docs and the brief, with a reviewer that did not write them. | Yes |
+| Command | What it does |
+| --- | --- |
+| `/longevo-init` | The first time: reviews the repo and its AGENTS.md, and applies the changes you pick so every agent sees the same rules. Every session after that: a short update. |
+| `longevo-testing` | Runs by itself when the agent writes tests: a test plan first, then tests that check results instead of mocks. Based on [Primo's testing skill](https://github.com/primo-devs/public-skills). |
+| `/longevo-sync` | Compares docs with the code and with external sources, and applies the small fixes you pick. |
+| `/longevo-brief` | Collects the rules, code, docs and tests for one task into a brief in `docs/work/`, as input for spec-driven development. |
+| `/longevo-review` | Reviews your changes against the rules, the testing guide, the docs and the brief, with a reviewer that did not write them. |
 
-Every command works the same way:
+The four commands work the same way:
 
 1. **Scan** the repo first.
 2. **Ask** only what the code cannot answer, one question at a time.
 3. **Propose** changes as diffs.
 4. **You pick** which changes to apply. Longevo writes only those, never commits, and keeps its own state inside `.git`.
+
+It never writes to Notion, Confluence, Jira or Linear: it reads them through your agent's MCP servers and keeps only the links in the repo. Secrets it finds are reported by file and line, never printed.
 
 ## Install
 

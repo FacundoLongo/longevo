@@ -46,7 +46,15 @@ Longevo does not replace your agent or your workflow. It improves what the agent
 | `/longevo-brief` | Collects the rules, code, docs and tests for one task into a brief in `docs/work/`, as input for spec-driven development. |
 | `/longevo-review` | Reviews your changes against the rules, the testing guide, the docs and the brief, with a reviewer that did not write them. |
 
-Each of the four commands scans the repo first, asks only what the code cannot answer, and proposes changes as diffs. Longevo writes only the changes you pick, never stages or commits, and keeps its own state inside `.git`. It reads Notion, Confluence, Jira or Linear through your agent's MCP servers, keeps only the links in the repo and never writes to those tools. Its reports name secrets by file and line, never by value. See [how it works](docs/guides/how-it-works.md).
+The four commands:
+
+- scan the repo first and ask only what the code cannot answer;
+- propose changes as diffs and write only the ones you pick;
+- never stage or commit, and keep Longevo's own state inside `.git`;
+- read Notion, Confluence, Jira or Linear through your agent's MCP servers, keep only the links in the repo and never write to those tools;
+- name secrets by file and line, never by value.
+
+See [how it works](docs/guides/how-it-works.md).
 
 ## Install
 
@@ -56,7 +64,7 @@ One command for every agent (needs Node 18 or newer; stale-doc checks and `revie
 npx skills add FacundoLongo/longevo -g
 ```
 
-Then open your agent in a repo and run `/longevo-init`: `$longevo-init` in Codex, `/longevo:longevo-init` after the Claude Code plugin install, and pick it from `/skills` in Gemini CLI.
+Then open your agent in a repo and run `/longevo-init`. In Codex it is `$longevo-init`, after the Claude Code plugin install it is `/longevo:longevo-init`, and in Gemini CLI you pick it from `/skills`.
 
 The plugin installers for Claude Code, Gemini CLI and Copilot CLI, the first run and a working day are in [getting started](docs/guides/getting-started.md).
 

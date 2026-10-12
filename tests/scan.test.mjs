@@ -256,3 +256,31 @@ test('reports the Longevo block and hook commands', () => {
   assert.deepEqual(report.commands.real.hooks, ['pnpm lint']);
   assert.deepEqual(report.hooks.map((h) => h.tool), ['lefthook']);
 });
+
+test('reads UTF-16 instruction files and reports the ones it cannot read', () => {
+  const root = makeRepo({ 'src/a.ts': '1' });
+  writeFileSync(join(root, 'AGENTS.md'), Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('# Rules\n- Run `npm test`\n', 'utf16le')]));
+  writeFileSync(join(root, 'CLAUDE.md'), Buffer.from('# Claude\n\0\0binary\n'));
+  const report = scan(root);
+  assert.equal(report.instructions.files.find((f) => f.path === 'AGENTS.md').lines, 2);
+  const unreadable = report.findings.filter((f) => f.id === 'instruction-unreadable');
+  assert.deepEqual(unreadable.map((f) => f.evidence), [['CLAUDE.md']]);
+  assert.match(unreadable[0].message, /NUL bytes/);
+});
+
+test('says which package.json or Makefile defines each cited command', () => {
+  const root = makeRepo({
+    'AGENTS.md': '# Rules\n- `pnpm test`\n- `pnpm lint`\n- `make build`\n- `pnpm gone`\n',
+    'package.json': '{"scripts":{"test":"vitest"}}',
+    'web/package.json': '{"scripts":{"lint":"eslint ."}}',
+    Makefile: 'build:\n\tgo build ./...\n',
+  });
+  const where = Object.fromEntries(scan(root).commands.cited.map((c) => [c.text, c.where]));
+  assert.deepEqual(where, { 'pnpm test': ['package.json'], 'pnpm lint': ['web/package.json'], 'make build': ['Makefile'], 'pnpm gone': [] });
+});
+
+test('call assertions inside a string literal, like a fixture, do not count', () => {
+  const fixture = "const code = \"expect(a).toHaveBeenCalled(); expect(b).toHaveBeenCalledWith(1); expect(c).toHaveBeenCalledTimes(2)\";\ntest('x', () => {});\n";
+  const root = makeRepo({ 'src/a.test.ts': fixture });
+  assert.deepEqual(scan(root).tests.antiGoldenCandidates, []);
+});

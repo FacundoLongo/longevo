@@ -8,15 +8,22 @@ import { readText } from './text.mjs';
 
 export const RULE_STATUSES = ['implemented and tested', 'implemented without test', 'missing', 'contradicts', 'no source'];
 
-const HEADING = /^#{2,4}\s+(R-[A-Z0-9]+-\d+)\s*(?:·|—|-|:)\s*(.+?)\s*$/;
+const HEADING = /^(#{2,4})\s+(R-[A-Z0-9]+-\d+)(?:\s*(?:·|—|–|-|:)\s*(.*?))?\s*$/;
 const FIELD = /^(Source|Code|Test|Status):\s*(.*)$/i;
 const RULE_DOC = (file) => /\.mdx?$/.test(file) && /(^|\/)docs\//.test(file) && !/(^|\/)docs\/work\//.test(file);
 
+// `path:line`, `path:start-end`, or GitHub anchors like `path#L3-L5`, with or without a leading ./
 function parseCode(value) {
-  return value.split(',').map((ref) => ref.trim().replace(/^`|`$/g, '')).filter(Boolean).map((ref) => {
-    const [, path, start, end] = ref.match(/^(.+?)(?::(\d+)(?:-(\d+))?)?$/);
+  return value.split(',').map((ref) => ref.trim().replace(/^`|`$/g, '').replace(/^\.\//, '')).filter(Boolean).map((ref) => {
+    const [, path, start, end] = ref.match(/^(.+?)(?:(?::|#L)(\d+)(?:-L?(\d+))?)?$/);
     return { path, start: start ? Number(start) : null, end: end ? Number(end) : start ? Number(start) : null };
   });
+}
+
+// The test name: the first quoted or backticked part, so a line like `name` in tests/x.test.ts still works.
+function parseTest(value) {
+  const quoted = value.match(/`([^`]+)`|"([^"]+)"|'([^']+)'/);
+  return quoted ? (quoted[1] ?? quoted[2] ?? quoted[3]).trim() : value.trim();
 }
 
 export function parseRules(doc, text) {
@@ -31,18 +38,22 @@ export function parseRules(doc, text) {
     }
     if (inFence) return;
     const heading = line.match(HEADING);
+    const level = line.match(/^(#{1,6})\s/)?.[1].length;
     if (heading) {
-      rule = { id: heading[1], title: heading[2], doc, line: index + 1, source: null, code: [], test: null, status: null, scenarios: 0 };
+      rule = { id: heading[2], title: heading[3] ?? '', doc, line: index + 1, source: null, code: [], test: null, status: null, scenarios: 0 };
+      Object.defineProperty(rule, 'level', { value: heading[1].length, enumerable: false });
       rules.push(rule);
-    } else if (/^#{1,6}\s/.test(line)) {
+    } else if (level && (!rule || level <= rule.level)) {
       rule = null;
+    } else if (level) {
+      // A deeper subheading, like "#### Scenarios", is part of the rule.
     } else if (rule) {
       const field = line.match(FIELD);
       if (field) {
         const key = field[1].toLowerCase();
         const value = field[2].trim();
         if (key === 'code') rule.code = parseCode(value);
-        else if (key === 'test') rule.test = value.replace(/^["'`]|["'`]$/g, '');
+        else if (key === 'test') rule.test = parseTest(value);
         else rule[key] = value;
       } else if (/^\s*-\s*WHEN\b/i.test(line)) {
         rule.scenarios += 1;

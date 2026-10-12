@@ -209,3 +209,32 @@ test('marks a brief done', () => {
   assert.match(read(root, file), /^status: done$/m);
   assert.throws(() => apply('done', root, { doc: 'docs/a.md' }), /not a brief/);
 });
+
+test('block and import keep CRLF line endings', () => {
+  const root = makeRepo({ 'AGENTS.md': '# Rules\r\n\r\n- Use pnpm.\r\n', 'CLAUDE.md': '# Claude\r\n' });
+  apply('block', root, {});
+  const agents = read(root, 'AGENTS.md');
+  assert.equal(agents, '# Rules\r\n\r\n- Use pnpm.\r\n\r\n<!-- longevo:start -->\r\n## Longevo\r\n- Start each session with the `longevo-init` skill.\r\n<!-- longevo:end -->\r\n');
+  assert.equal(apply('block', root, {}).status, 'unchanged');
+  apply('import', root, {});
+  assert.equal(read(root, 'CLAUDE.md'), '@AGENTS.md\r\n\r\n# Claude\r\n');
+});
+
+test('markers inside a code fence are an example, not the block', () => {
+  const example = '```markdown\n<!-- longevo:start -->\n## Longevo\n<!-- longevo:end -->\n```\n';
+  const root = makeRepo({ 'AGENTS.md': `# Rules\n\n${example}` });
+  apply('block', root, {});
+  const text = read(root, 'AGENTS.md');
+  assert.ok(text.startsWith(`# Rules\n\n${example}`), text);
+  assert.ok(text.endsWith('<!-- longevo:start -->\n## Longevo\n- Start each session with the `longevo-init` skill.\n<!-- longevo:end -->\n'), text);
+  assert.equal(apply('block', root, {}).status, 'unchanged');
+});
+
+test('checked keeps comment lines and other items of the sources list', () => {
+  const text = '---\nsources:\n  # Owned by the billing team.\n  - url: https://a\n    title: A # main page\n    checked: 2026-01-01\n  - https://b\n---\n# A\n';
+  const root = makeRepo({ 'docs/a.md': text });
+  apply('checked', root, { doc: 'docs/a.md', url: 'https://a' }, { today: '2026-10-11' });
+  assert.equal(read(root, 'docs/a.md'), text.replace('checked: 2026-01-01', 'checked: 2026-10-11'));
+  apply('checked', root, { doc: 'docs/a.md', url: 'https://b' }, { today: '2026-10-11' });
+  assert.match(read(root, 'docs/a.md'), /  # Owned by the billing team\.\n  - url: https:\/\/a\n    title: A # main page\n    checked: 2026-10-11\n  - url: https:\/\/b\n    checked: 2026-10-11\n---/);
+});

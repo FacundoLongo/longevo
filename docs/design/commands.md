@@ -98,7 +98,7 @@ A script lists living docs whose `covers` changed after the anchor, `covers` tha
 | Spec Kit | It is the input of `/speckit-specify` |
 | Plan mode | You give it as context |
 
-When the work is done, the brief gets `status: done` and stays where it is. `sync` then moves its criteria into the rules in `docs/domain/`. Docs grow with each change.
+When the work is done, the brief gets `status: done` and stays where it is. `sync` then moves its criteria into the rules in `docs/domain/`, with the brief as each rule's `Source`, and stops proposing that brief. Docs grow with each change.
 
 ## `review`: a second look before you commit
 

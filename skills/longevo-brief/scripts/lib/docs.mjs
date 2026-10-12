@@ -1,4 +1,4 @@
-// Living docs (with `covers` in their frontmatter), their drift anchored on the `verified` line (D4),
+// Living docs (with `covers` in their frontmatter), their drift anchored on the `verified` line (D11),
 // and the docs that could become living docs.
 import { join } from 'node:path';
 import { isNoise } from './attributes.mjs';
@@ -11,7 +11,7 @@ import { readText } from './text.mjs';
 const MARKDOWN = /\.mdx?$/;
 const RECORD = /(^|\/)(decisions|adr|adrs|work|rfc|rfcs)\//i;
 const GENERATED_DOC = /(^|\/)docs\/(coverage|sources)\.md$/;
-const LONGEVO_KEY = /^(covers|verified):/m;
+const LONGEVO_KEY = /^(covers|verified)\s*[:=]/m;
 const countLines = (text) => text.replace(/\n$/, '').split('\n').length;
 
 function verifiedAt(sc, rev, doc) {
@@ -27,16 +27,20 @@ function anchorOf(sc, doc) {
   return candidates.find((hash) => verifiedAt(sc, hash, doc) !== verifiedAt(sc, `${hash}^`, doc)) ?? null;
 }
 
-// Files matching `covers` in commits after the anchor, without noise and big reformat commits.
-// Docs verified in the same commit share one walk of the history after it.
+// Files matching `covers` in commits after the anchor, without noise and big reformat commits, that still differ
+// from the anchor: a change that was reverted later does not count. Docs verified in the same commit share one
+// walk of the history after it.
 export function changedSince(sc, anchor, covers, generated, walks = new Map()) {
   if (!walks.has(anchor)) {
-    walks.set(anchor, commitsSince(sc, { range: `${anchor}..HEAD` })
+    const commits = commitsSince(sc, { range: `${anchor}..HEAD` })
       .map((commit) => commit.files.filter((file) => !isNoise(file, generated)))
-      .filter((files) => files.length <= MAX_COMMIT_FILES));
+      .filter((files) => files.length <= MAX_COMMIT_FILES);
+    const net = new Set((git(sc.root, ['-c', 'core.quotePath=false', 'diff', '--name-only', '--no-renames', '--no-ext-diff', anchor, 'HEAD']) ?? '').split('\n').filter(Boolean));
+    walks.set(anchor, { commits, net });
   }
+  const { commits, net } = walks.get(anchor);
   const changed = new Set();
-  for (const files of walks.get(anchor)) for (const file of files) if (matchesAny(file, covers)) changed.add(file);
+  for (const files of commits) for (const file of files) if (net.has(file) && matchesAny(file, covers)) changed.add(file);
   return [...changed].sort();
 }
 
@@ -56,8 +60,11 @@ export function livingDocs(sc, files, generated, { drift = true } = {}) {
     }
     if (data.covers && !RECORD.test(path)) {
       const covers = Array.isArray(data.covers) ? data.covers : [data.covers];
-      const anchor = drift && data.verified ? anchorOf(sc, path) : null;
-      const changed = anchor ? changedSince(sc, anchor, covers, generated, walks) : [];
+      // A verified date changed in the working tree and not committed yet counts as a check made now.
+      const committed = drift && data.verified && sc.isGit ? verifiedAt(sc, 'HEAD', path) : null;
+      const fresh = committed !== null && String(committed) !== String(data.verified);
+      const anchor = fresh ? (git(sc.root, ['rev-parse', 'HEAD']) ?? '').trim() || null : drift && data.verified ? anchorOf(sc, path) : null;
+      const changed = anchor && !fresh ? changedSince(sc, anchor, covers, generated, walks) : [];
       const unmatched = covers.filter((pattern) => !files.some((file) => matches(file, pattern)));
       living.push({ path, covers, verified: data.verified ?? null, anchor, stale: changed.length > 0, changed, unmatched });
     } else if (/(^|\/)docs\//.test(path) && !RECORD.test(path) && !GENERATED_DOC.test(path) && !/(^|\/)CHANGELOG/i.test(path)) {

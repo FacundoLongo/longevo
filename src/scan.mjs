@@ -37,8 +37,9 @@ export function scan(cwd, { markSession = false, home = homedir() } = {}) {
     });
 
   const instructionFiles = findInstructionFiles(files, dirs);
-  const texts = Object.fromEntries(instructionFiles.map((file) => [file, readText(join(sc.root, file)) ?? '']));
-  const instructionInventory = inventory(sc, instructionFiles, texts);
+  const raw = Object.fromEntries(instructionFiles.map((file) => [file, readText(join(sc.root, file))]));
+  const texts = Object.fromEntries(instructionFiles.map((file) => [file, raw[file] ?? '']));
+  const instructionInventory = inventory(sc, instructionFiles, raw);
   const aliases = linkedFiles(sc.root, instructionFiles);
   const loads = whoLoads(dirs, instructionFiles, texts, { geminiFiles: geminiFiles(sc, home), aliases });
 
@@ -50,8 +51,10 @@ export function scan(cwd, { markSession = false, home = homedir() } = {}) {
   const ws = workspaces(sc.root, files);
   const docs = livingDocs(sc, files, generated);
   const hooks = findHooks(sc, scoped);
-  const real = { ...realCommands(sc.root, scoped), hooks: hooks.flatMap((hook) => hook.commands) };
-  const cited = instructionFiles.flatMap((file) => citedCommands(file, codeSpans(texts[file])));
+  const { defined, ...commands } = realCommands(sc.root, scoped);
+  const real = { ...commands, hooks: hooks.flatMap((hook) => hook.commands) };
+  const cited = instructionFiles.flatMap((file) => citedCommands(file, codeSpans(texts[file])))
+    .map((command) => ({ ...command, where: [...new Set(defined[`${command.kind}:${command.name}`] ?? [])].sort() }));
   const agentsPath = join(sc.cwd, 'AGENTS.md');
 
   return redactDeep({

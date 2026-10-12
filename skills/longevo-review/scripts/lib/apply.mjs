@@ -4,12 +4,12 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { generatedFiles } from './attributes.mjs';
 import { MAX_BLOCK_LINES, readBlock, renderBlock, writeBlock } from './block.mjs';
 import { coverageFor, COVERAGE_FILE } from './coverage.mjs';
-import { parseFrontmatter, setFrontmatter } from './frontmatter.mjs';
+import { parseFrontmatter, setFrontmatter, setSourceChecked } from './frontmatter.mjs';
 import { matches } from './glob.mjs';
 import { IMPORTS_AGENTS, prose } from './instructions.mjs';
 import { git, listFiles, scope } from './repo.mjs';
 import { collectSources, renderSources, SOURCES_FILE } from './sources.mjs';
-import { addDeclined, removeDeclined } from './state.mjs';
+import { addDeclined, removeDeclined, stateDir } from './state.mjs';
 import { BRIEF } from './work.mjs';
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -51,8 +51,20 @@ function inside(sc, path, { base = sc.root, markdown = false } = {}) {
   return full;
 }
 
-function checkDate(value) {
-  if (value !== undefined && !(typeof value === 'string' && DATE.test(value))) throw new Error(`verified must be a date like YYYY-MM-DD, not ${JSON.stringify(value)}.`);
+// The shape, and a day that exists on the calendar (no 2026-02-30), with a time of day that exists.
+function realDate(value) {
+  if (typeof value !== 'string' || !DATE.test(value)) return false;
+  const [day, time] = value.split('T');
+  const [y, m, d] = day.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return false;
+  if (!time) return true;
+  const [h, min, s] = time.split(':').map(Number);
+  return h < 24 && min < 60 && s < 60;
+}
+
+function checkDate(value, name = 'verified') {
+  if (value !== undefined && !realDate(value)) throw new Error(`${name} must be a date like YYYY-MM-DD, not ${JSON.stringify(value)}.`);
 }
 
 const plain = (text) => typeof text === 'string' && !/[`\n]/.test(text);
@@ -78,6 +90,15 @@ function gitDirs(sc) {
 // the repo and outside .git, or nothing is written.
 function guardTarget(sc, path) {
   const root = realpathSync(sc.root);
+  for (let dir = dirname(path); dir !== sc.root && under(dir, sc.root); dir = dirname(dir)) {
+    let stat = null;
+    try {
+      stat = lstatSync(dir);
+    } catch {
+      continue;
+    }
+    if (stat.isSymbolicLink() && !existsSync(dir)) throw new Error(`${rel(sc, dir)} is a link to a folder that does not exist; nothing was written.`);
+  }
   let target = path;
   for (let hops = 0; hops < 40; hops += 1) {
     let stat = null;
@@ -111,21 +132,27 @@ function checkGlob(files, glob) {
 
 function block(sc, input) {
   const { commands = [], triggers = [], testingDoc = false, coverageDoc = false, creating = [] } = input;
-  if (!Array.isArray(creating)) throw new Error('creating must be a list of paths.');
+  for (const [name, list] of Object.entries({ commands, triggers, creating })) {
+    if (!Array.isArray(list)) throw new Error(`${name} must be a list.`);
+  }
   creating.forEach((path) => inside(sc, path));
   const exists = (doc) => existsSync(inside(sc, doc, { markdown: true })) || creating.includes(doc);
-  for (const { label, command } of commands) {
+  const missing = (doc) => new Error(`${doc} does not exist. If this run creates it, add it to creating.`);
+  for (const entry of commands) {
+    const { label, command } = entry ?? {};
     if (typeof label !== 'string' || typeof command !== 'string' || !label.trim() || !command.trim()) throw new Error('Each command needs a label and a command.');
     if (/[`\n]/.test(label + command)) throw new Error('Commands and labels cannot contain backticks or new lines.');
   }
   const { files } = listFiles(sc);
-  for (const { glob, doc } of triggers) {
+  for (const entry of triggers) {
+    const { glob, doc } = entry ?? {};
+    if (typeof glob !== 'string' || typeof doc !== 'string') throw new Error('Each trigger needs a glob and a doc.');
     if (!plain(glob) || !plain(doc)) throw new Error('Trigger globs and docs cannot contain backticks or new lines.');
-    if (!exists(doc)) throw new Error(`${doc} does not exist.`);
+    if (!exists(doc)) throw missing(doc);
     checkGlob(files, glob);
   }
-  if (testingDoc && !exists('docs/testing.md')) throw new Error('docs/testing.md does not exist.');
-  if (coverageDoc && !exists(COVERAGE_FILE)) throw new Error(`${COVERAGE_FILE} does not exist.`);
+  if (testingDoc && !exists('docs/testing.md')) throw missing('docs/testing.md');
+  if (coverageDoc && !exists(COVERAGE_FILE)) throw missing(COVERAGE_FILE);
   const lines = renderBlock({ commands, triggers, testingDoc, coverageDoc });
   if (lines.length > MAX_BLOCK_LINES) {
     throw new Error(`The block would have ${lines.length} lines, which is more than ${MAX_BLOCK_LINES} lines. Ask which triggers to keep.`);
@@ -136,9 +163,11 @@ function block(sc, input) {
 }
 
 function importAgents(sc, { file }) {
-  const candidates = (file !== undefined ? [file] : ['CLAUDE.md', '.claude/CLAUDE.md']).map((f) => inside(sc, f, { base: sc.cwd }));
+  if (file !== undefined) inside(sc, file, { base: sc.cwd });
   if (file !== undefined && !/(^|\/)CLAUDE\.md$/.test(String(file))) throw new Error(`${file} is not a CLAUDE.md file.`);
-  const path = candidates.find((p) => existsSync(p));
+  // Only the file that will be written is checked, so a .claude folder linked outside does not block CLAUDE.md.
+  const name = (file !== undefined ? [file] : ['CLAUDE.md', '.claude/CLAUDE.md']).find((f) => existsSync(join(sc.cwd, f)));
+  const path = name === undefined ? undefined : inside(sc, name, { base: sc.cwd });
   if (!path) throw new Error('There is no CLAUDE.md here, so there is nothing to import into. Longevo does not create one.');
   if (lstatSync(path).isSymbolicLink()) {
     throw new Error(`${rel(sc, path)} is a link to ${relative(dirname(path), realpathSync(path))}, so Claude Code already reads that file. Nothing to import.`);
@@ -150,7 +179,8 @@ function importAgents(sc, { file }) {
   const before = readFileSync(path, 'utf8');
   if (IMPORTS_AGENTS.test(prose(before))) return write(sc, 'import', path, before, before);
   const line = rel(sc, path).endsWith('.claude/CLAUDE.md') ? '@../AGENTS.md' : '@AGENTS.md';
-  return write(sc, 'import', path, before, `${line}\n\n${before}`);
+  const eol = before.includes('\r\n') ? '\r\n' : '\n';
+  return write(sc, 'import', path, before, `${line}${eol}${eol}${before}`);
 }
 
 function gemini(sc) {
@@ -177,7 +207,7 @@ function gemini(sc) {
   return write(sc, 'gemini', path, before, after);
 }
 
-function frontmatter(sc, { doc, covers, verified }, { today }) {
+function frontmatter(sc, { doc, covers, verified }, { today, now }) {
   checkDate(verified);
   if (!existsSync(inside(sc, doc, { markdown: true }))) throw new Error(`${doc} does not exist.`);
   if (!Array.isArray(covers) || covers.length === 0) throw new Error('covers needs at least one glob.');
@@ -185,7 +215,8 @@ function frontmatter(sc, { doc, covers, verified }, { today }) {
   covers.forEach((glob) => checkGlob(files, glob));
   const path = join(sc.root, doc);
   const before = readFileSync(path, 'utf8');
-  return write(sc, 'frontmatter', path, before, setFrontmatter(before, { covers, verified: verified ?? today }));
+  const current = parseFrontmatter(before).data.verified;
+  return write(sc, 'frontmatter', path, before, setFrontmatter(before, { covers, verified: verified ?? nextVerified(current, today, now) }));
 }
 
 function readDoc(sc, doc) {
@@ -207,13 +238,12 @@ function verify(sc, { doc, verified }, { today, now }) {
 
 // A source was read and the doc still matches it: only that source's checked date changes.
 function checked(sc, { doc, url, checked: date }, { today }) {
-  checkDate(date);
+  checkDate(date, 'checked');
   if (typeof url !== 'string' || !url.trim()) throw new Error('checked needs the url of the source.');
   const { path, before, data } = readDoc(sc, doc);
   const sources = (Array.isArray(data.sources) ? data.sources : []).map((s) => (typeof s === 'string' ? { url: s } : s));
   if (!sources.some((s) => s.url === url)) throw new Error(`${doc} does not cite ${url}.`);
-  const next = sources.map((s) => (s.url === url ? { ...s, checked: date ?? today } : s));
-  return write(sc, 'checked', path, before, setFrontmatter(before, { sources: next }));
+  return write(sc, 'checked', path, before, setSourceChecked(before, url, date ?? today));
 }
 
 function sources(sc) {
@@ -228,8 +258,11 @@ function coverage(sc) {
   return write(sc, 'coverage', path, readOrNull(path), coverageFor(sc, files, generatedFiles(sc, files)));
 }
 
+const NOT_STORED = 'This folder is not a git repo, so declined changes are not remembered.';
+
 function decline(sc, { keys }) {
   if (!Array.isArray(keys) || keys.some((key) => typeof key !== 'string')) throw new Error('decline needs a list of keys.');
+  if (!stateDir(sc)) return { op: 'decline', declined: [], stored: false, note: NOT_STORED };
   return { op: 'decline', declined: addDeclined(sc, keys) };
 }
 
@@ -279,6 +312,7 @@ function done(sc, { doc }) {
 
 function undecline(sc, { keys = [], all = false }) {
   if (!all && (!Array.isArray(keys) || keys.some((key) => typeof key !== 'string'))) throw new Error('undecline needs a list of keys, or all: true.');
+  if (!stateDir(sc)) return { op: 'undecline', declined: [], stored: false, note: NOT_STORED };
   return { op: 'undecline', declined: removeDeclined(sc, keys, all) };
 }
 

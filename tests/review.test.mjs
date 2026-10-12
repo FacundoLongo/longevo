@@ -85,3 +85,22 @@ test('skips secrets in generated files', () => {
   gitIn(root, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'codegen');
   assert.deepEqual(reviewReport(root).security, []);
 });
+
+test('returns the changes the user declined, so the list can leave them out', async () => {
+  const root = branch();
+  const { apply } = await import('../src/lib/apply.mjs');
+  apply('decline', root, { keys: ['verify:docs/domain/refunds.md'] });
+  assert.deepEqual(reviewReport(root).declined, ['verify:docs/domain/refunds.md']);
+});
+
+test('a repo with no commits yet reviews its files against an empty tree', () => {
+  const root = makeRepo({ 'src/a.ts': 'export const A = 1;\n' }, { git: false });
+  gitIn(root, 'init', '-q');
+  gitIn(root, 'add', 'src/a.ts');
+  writeFiles(root, { 'src/b.ts': 'export const B = 2;\n' });
+  const report = reviewReport(root);
+  assert.equal(report.nothing, false);
+  assert.equal(report.base.fallback, 'no-commits');
+  assert.deepEqual(report.changed.map((c) => `${c.path}:${c.status}`), ['src/a.ts:added', 'src/b.ts:untracked']);
+  assert.equal(report.diffLines.added, 2);
+});

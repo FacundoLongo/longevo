@@ -29,9 +29,9 @@ Status: implemented and tested
 | Field | What it holds |
 | --- | --- |
 | Heading | `### R-<AREA>-<NNN> · <the rule in plain words>`. Ids never change and are never reused; a new rule takes the next free number in its area |
-| `Source` | Where the rule comes from: a source in the frontmatter, a decision, or a person. Without one, the status is `no source` |
-| `Code` | `path:line` or `path:start-end`, comma separated |
-| `Test` | The test name, exactly as it appears in the test file |
+| `Source` | Where the rule comes from: a source in the frontmatter, a decision, a person, or the brief's path (`docs/work/<date>-<slug>/brief.md`) for a rule taken from a finished brief. Without one, the status is `no source` |
+| `Code` | `path:line` or `path:start-end`, comma separated (`path#L3-L5` also works) |
+| `Test` | The test name, exactly as it appears in the test file. If the line has more text, put the name in quotes or backticks |
 | `Status` | `implemented and tested`, `implemented without test`, `missing`, `contradicts` or `no source` |
 
 ## Rules from a source

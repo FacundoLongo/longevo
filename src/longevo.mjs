@@ -16,7 +16,7 @@ export function parseArgs(argv) {
   for (let i = 1; i < argv.length; i += 1) {
     const arg = argv[i];
     if (['--cwd', '--input', '--paths', '--base'].includes(arg)) {
-      if (!argv[i + 1]) throw new Error(`${arg} needs a value`);
+      if (!argv[i + 1] || argv[i + 1].startsWith('--')) throw new Error(`${arg} needs a value`);
       args[arg.slice(2)] = argv[(i += 1)];
     } else if (arg === '--session') {
       args.markSession = true;
@@ -29,6 +29,19 @@ export function parseArgs(argv) {
   return args;
 }
 
+// Operations that take no input never read stdin, so an open empty pipe cannot fail or block them.
+const NO_INPUT = new Set(['gemini', 'sources', 'coverage']);
+
+function readStdin() {
+  try {
+    return readFileSync(0, 'utf8');
+  } catch (error) {
+    // A non-blocking pipe with nothing written yet: there is no input.
+    if (error.code === 'EAGAIN') return '';
+    throw error;
+  }
+}
+
 export function run(argv) {
   const args = parseArgs(argv);
   if (args.command === 'scan') return scan(args.cwd, { markSession: args.markSession });
@@ -39,7 +52,7 @@ export function run(argv) {
     return contextReport(args.cwd, { paths: args.paths.split(',').map((p) => p.trim()).filter(Boolean) });
   }
   if (args.command === 'apply') {
-    const raw = args.input ? readFileSync(args.input, 'utf8') : process.stdin.isTTY ? '' : readFileSync(0, 'utf8');
+    const raw = args.input ? readFileSync(args.input, 'utf8') : process.stdin.isTTY || NO_INPUT.has(args.rest[0]) ? '' : readStdin();
     let input = {};
     if (raw.trim()) {
       try {

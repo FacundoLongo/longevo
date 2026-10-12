@@ -26,6 +26,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 - `apply` refuses to write through links that point outside the repo or into `.git`.
 - The scan report is version 2.
 
+### Fixed
+
+- A change that was reverted later no longer makes a doc stale, and a new `verified` date that is not committed yet counts as a check.
+- `apply` no longer fails when the terminal leaves an empty pipe on stdin.
+- Files with CRLF line endings keep them when Longevo writes the block or `@AGENTS.md`, and block markers inside a code fence count as an example.
+- Writing a `checked` date keeps comments and the other sources as they are.
+- Frontmatter with nested maps, block text or escaped quotes is read. TOML frontmatter (`+++`) gets a clear message instead of a second frontmatter block.
+- Rules with no title, an en dash, `path#L3-L5` code refs, a test name inside longer text or `####` subheadings are read.
+- A finished brief whose criteria are already rules is not proposed again.
+- `review` works in a repo with no commits yet, and leaves out the changes you declined.
+- The scan reads UTF-16 instruction files, reports the ones it cannot read, and shows which package.json or Makefile defines each cited command.
+- Call assertions inside string fixtures no longer mark a test file as a bad example.
+- Clear errors for a missing folder, an option without a value, impossible dates, malformed `apply` input and links to folders that do not exist. Outside git, `decline` says it cannot remember instead of failing, and `sync` says drift was not checked.
+
 ## [0.1.0] - 2026-10-11
 
 ### Added

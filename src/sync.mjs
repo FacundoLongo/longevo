@@ -22,16 +22,35 @@ const MAX_COMMITS = 20;
 const MAX_DIFF_LINES = 300;
 const MAX_TOTAL_DIFF_LINES = 1500;
 
-function commitsTouching(sc, anchor, files) {
-  const out = git(sc.root, ['log', '--no-merges', `--max-count=${MAX_COMMITS}`, '--format=%H%x09%s', `${anchor}..HEAD`, '--', ...files]) ?? '';
-  return out.split('\n').filter(Boolean).map((line) => {
-    const [hash, ...subject] = line.split('\t');
-    return { hash: hash.slice(0, 12), subject: subject.join('\t') };
-  });
+// Paths go to git in chunks, so a doc with thousands of changed files stays under the argument limit.
+const CHUNK = 500;
+const inChunks = (files, size) => Array.from({ length: Math.ceil(files.length / size) }, (_, i) => files.slice(i * size, (i + 1) * size));
+
+export function commitsTouching(sc, anchor, files, { chunk = CHUNK } = {}) {
+  const parts = inChunks(files, chunk);
+  const seen = new Map();
+  for (const part of parts) {
+    const out = git(sc.root, ['log', '--no-merges', `--max-count=${MAX_COMMITS}`, '--format=%H%x09%s', `${anchor}..HEAD`, '--', ...part]) ?? '';
+    for (const line of out.split('\n').filter(Boolean)) {
+      const [hash, ...subject] = line.split('\t');
+      seen.set(hash, { hash, subject: subject.join('\t') });
+    }
+  }
+  let commits = [...seen.values()];
+  if (parts.length > 1) {
+    // Several chunks: put the commits back in git log order, newest first.
+    const rank = new Map((git(sc.root, ['rev-list', '--no-merges', `${anchor}..HEAD`]) ?? '').split('\n').map((hash, index) => [hash, index]));
+    commits = commits.sort((a, b) => (rank.get(a.hash) ?? 0) - (rank.get(b.hash) ?? 0));
+  }
+  return commits.slice(0, MAX_COMMITS).map(({ hash, subject }) => ({ hash: hash.slice(0, 12), subject }));
 }
 
-function diffSince(sc, anchor, files, budget) {
-  const lines = (git(sc.root, ['diff', '--no-ext-diff', '--no-color', '--src-prefix=a/', '--dst-prefix=b/', `${anchor}..HEAD`, '--', ...files]) ?? '').replace(/\n$/, '').split('\n');
+export function diffSince(sc, anchor, files, budget, { chunk = CHUNK } = {}) {
+  const lines = inChunks(files, chunk)
+    .map((part) => (git(sc.root, ['diff', '--no-ext-diff', '--no-color', '--src-prefix=a/', '--dst-prefix=b/', `${anchor}..HEAD`, '--', ...part]) ?? '').replace(/\n$/, ''))
+    .filter(Boolean)
+    .join('\n')
+    .split('\n');
   const keep = Math.max(0, Math.min(MAX_DIFF_LINES, budget.left));
   budget.left -= keep;
   return { diff: lines.slice(0, keep).join('\n'), truncated: lines.length > keep };
@@ -54,15 +73,18 @@ export function syncReport(cwd, { home = homedir(), today = localDate() } = {}) 
     return { ...doc, ...history, missingPaths: missing };
   });
   const current = readText(join(sc.root, SOURCES_FILE));
+  // A finished brief whose folder a rule cites as its Source has already become rules.
+  const ruled = (brief) => rules.some((rule) => rule.source?.includes(brief.path.split('/')[2]));
   // What the skill needs to decide comes first; the long diffs come last.
   return redactDeep({
     version: VERSION,
     scope: sc,
     findings: [...docFindings(living), ...ruleFindings(sc, files, rules, files.filter(isTestFile)), ...sourceFindings(sources, today)],
+    notChecked: sc.isGit ? [] : ['drift: this folder is not a git repo, so no doc can be stale'],
     declined: declined(sc),
     coverage: coverageState(sc.root, coverageFor(sc, files, generated, { docs: living.living, rules })),
     sourcesFile: { file: SOURCES_FILE, exists: current !== null, upToDate: current === renderSources(sources) },
-    briefs: { done: work.filter((b) => b.status === 'done'), open: work.filter((b) => b.status !== 'done') },
+    briefs: { done: work.filter((b) => b.status === 'done' && !ruled(b)), open: work.filter((b) => b.status !== 'done') },
     rules,
     sources,
     mcp: mcpServers(sc, home),

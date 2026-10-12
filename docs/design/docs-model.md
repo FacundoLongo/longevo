@@ -42,7 +42,7 @@ verified: 2026-10-11          # the anchor is the commit that changed this line
 ---
 ```
 
-When files in `covers` change after the anchor commit, the doc is stale. `init` shows stale docs in the session update, and `sync` proposes the fix. See [D11](../decisions/docs.md).
+When files in `covers` change after the anchor commit, the doc is stale. A change that was reverted later does not count, and a new `verified` date that is not committed yet counts as a check made now. `init` shows stale docs in the session update, and `sync` proposes the fix. See [D11](../decisions/docs.md). Longevo reads YAML frontmatter only; a doc with TOML frontmatter (`+++`) cannot be a living doc.
 
 `init` proposes this frontmatter for at most five existing docs per run, starting with the areas that change most. It leaves decisions, ADRs and changelogs alone.
 

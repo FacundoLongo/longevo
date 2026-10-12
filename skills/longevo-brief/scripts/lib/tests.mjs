@@ -62,12 +62,15 @@ function insideString(line, index) {
   return quote !== null;
 }
 
-function mocksStorage(text) {
-  return [...text.matchAll(new RegExp(STORAGE_MOCK.source, 'gi'))].some((match) => {
+// Matches of a pattern that are code, not text inside a string literal.
+function codeMatches(text, pattern, flags) {
+  return [...text.matchAll(new RegExp(pattern.source, flags))].filter((match) => {
     const lineStart = text.lastIndexOf('\n', match.index - 1) + 1;
     return !insideString(text.slice(lineStart, match.index), match.index - lineStart);
   });
 }
+
+const mocksStorage = (text) => codeMatches(text, STORAGE_MOCK, 'gi').length > 0;
 
 export const isTestFile = (file) => TEST_FILE.test(file) && !/(^|\/)(node_modules|vendor)\//.test(file);
 
@@ -80,7 +83,7 @@ export function analyzeTests(root, files, packages = [], maxFiles = 5000) {
       area: areaOf(file, packages),
       kind: testKind(file),
       mocksStorage: text !== null && mocksStorage(text),
-      callAsserts: text === null ? 0 : text.match(CALL_ASSERT)?.length ?? 0,
+      callAsserts: text === null ? 0 : codeMatches(text, CALL_ASSERT, 'g').length,
     };
   });
 }

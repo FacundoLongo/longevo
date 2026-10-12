@@ -1,6 +1,7 @@
 import { lstatSync, realpathSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { git } from './repo.mjs';
+import { unreadableReason } from './text.mjs';
 
 const PATTERNS = [
   /(^|\/)AGENTS\.md$/,
@@ -53,6 +54,7 @@ export function findInstructionFiles(files, dirs) {
 export function inventory(sc, files, texts) {
   return files.map((path) => ({
     path,
+    ...(texts[path] === null ? { unreadable: unreadableReason(join(sc.root, path)) } : {}),
     lines: texts[path] ? texts[path].replace(/\n$/, '').split('\n').length : 0,
     bytes: rawSize(sc.root, path, texts[path]),
     commits: sc.isGit && !sc.shallow ? Number((git(sc.root, ['rev-list', '--count', 'HEAD', '--', path]) ?? '0').trim()) : null,
@@ -88,6 +90,9 @@ export function instructionFindings(inv, loads) {
   const claude = loads['claude-code'];
   const claudeFiles = claude.filter((file) => base(file).startsWith('CLAUDE'));
   const hasAgents = loads.codex.length > 0;
+  for (const file of inv.filter((f) => f.unreadable)) {
+    findings.push({ id: 'instruction-unreadable', severity: 'medium', evidence: [file.path], message: `Longevo could not read ${file.path}: ${file.unreadable}. Its rules were not checked; save it as UTF-8 text.` });
+  }
   if (!claude.length && !hasAgents) {
     findings.push({ id: 'no-entry-file', severity: 'high', message: 'There is no AGENTS.md or CLAUDE.md in this folder or its parents.' });
   }

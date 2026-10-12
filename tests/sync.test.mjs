@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { syncReport } from '../src/sync.mjs';
+import { scope } from '../src/lib/repo.mjs';
+import { commitsTouching, diffSince, syncReport } from '../src/sync.mjs';
 import { gitIn, makeRepo, writeFiles } from './helpers/fixture.mjs';
 
 const commit = (root, files, message) => {
@@ -72,4 +73,25 @@ test('returns the changes the user declined', async () => {
   const root = makeRepo({ 'a.ts': '1' });
   apply('decline', root, { keys: ['coverage'] });
   assert.deepEqual(syncReport(root, { home: root, today: '2026-10-11' }).declined, ['coverage']);
+});
+
+test('commits and diffs read in chunks match one call, so long file lists never hit the argument limit', () => {
+  const root = makeRepo({ 'docs/domain/refunds.md': DOC, 'src/refunds/policy.ts': '1\n', 'src/refunds/a.ts': '1\n', 'src/refunds/b.ts': '1\n' });
+  const anchor = gitIn(root, 'rev-parse', 'HEAD').trim();
+  commit(root, { 'src/refunds/a.ts': '2\n' }, 'Change a');
+  commit(root, { 'src/refunds/b.ts': '2\n', 'src/refunds/policy.ts': '2\n' }, 'Change b and policy');
+  commit(root, { 'src/refunds/a.ts': '3\n' }, 'Change a again');
+  const sc = scope(root);
+  const files = ['src/refunds/a.ts', 'src/refunds/b.ts', 'src/refunds/policy.ts'];
+  assert.deepEqual(commitsTouching(sc, anchor, files, { chunk: 1 }), commitsTouching(sc, anchor, files));
+  assert.deepEqual(commitsTouching(sc, anchor, files).map((c) => c.subject), ['Change a again', 'Change b and policy', 'Change a']);
+  assert.deepEqual(diffSince(sc, anchor, files, { left: 1500 }, { chunk: 1 }), diffSince(sc, anchor, files, { left: 1500 }));
+});
+
+test('a finished brief whose criteria are already rules is not proposed again', () => {
+  const brief = '---\nstatus: done\ntask: "#7"\ncovers: ["src/refunds/**"]\n---\n# Brief\n';
+  const root = makeRepo({ 'docs/work/2026-10-01-shorter-window/brief.md': brief, 'docs/work/2026-10-02-fees/brief.md': brief, 'src/refunds/policy.ts': '1\n' });
+  assert.deepEqual(syncReport(root, { home: root }).briefs.done.map((b) => b.path), ['docs/work/2026-10-01-shorter-window/brief.md', 'docs/work/2026-10-02-fees/brief.md']);
+  commit(root, { 'docs/domain/refunds.md': '### R-REF-002 · A refund expires after 24 hours\nSource: docs/work/2026-10-01-shorter-window/brief.md\nStatus: missing\n' }, 'Move the criteria');
+  assert.deepEqual(syncReport(root, { home: root }).briefs.done.map((b) => b.path), ['docs/work/2026-10-02-fees/brief.md']);
 });

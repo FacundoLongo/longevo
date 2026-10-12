@@ -71,3 +71,38 @@ test('skips briefs in docs/work', () => {
 test('a rule inside a code block is an example, not a rule', () => {
   assert.deepEqual(parseRules('docs/model.md', `Example:\n\n\`\`\`markdown\n${RULE}\`\`\`\n`), []);
 });
+
+test('reads headings without a title or with an en dash, GitHub line anchors and test names inside text', () => {
+  const text = [
+    '### R-PAY-001',
+    'Code: ./src/a.ts, src/b.ts#L3-L5, `src/c.ts#L7`',
+    'Test: `refunds after 48 hours` in tests/refunds.test.ts',
+    'Status: implemented and tested',
+    '',
+    '### R-PAY-002 – Partial refunds',
+    'Test: "keeps the fee" (unit)',
+    '',
+  ].join('\n');
+  const [first, second] = parseRules('docs/domain/pay.md', text);
+  assert.equal(first.title, '');
+  assert.deepEqual(first.code, [{ path: 'src/a.ts', start: null, end: null }, { path: 'src/b.ts', start: 3, end: 5 }, { path: 'src/c.ts', start: 7, end: 7 }]);
+  assert.equal(first.test, 'refunds after 48 hours');
+  assert.equal(second.title, 'Partial refunds');
+  assert.equal(second.test, 'keeps the fee');
+});
+
+test('a deeper subheading stays inside the rule; a heading at its level or above ends it', () => {
+  const text = [
+    '### R-PAY-003 · Refunds expire',
+    '#### Scenarios',
+    '- WHEN a refund is 49 hours old',
+    '- THEN it is rejected',
+    'Status: missing',
+    '### Notes',
+    'Status: implemented and tested',
+    '',
+  ].join('\n');
+  const [rule] = parseRules('docs/domain/pay.md', text);
+  assert.equal(rule.scenarios, 1);
+  assert.equal(rule.status, 'missing');
+});

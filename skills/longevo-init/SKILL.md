@@ -15,7 +15,7 @@ Run the engine from this skill's folder:
 node <this skill's folder>/scripts/longevo.mjs scan --cwd . --session
 ```
 
-It prints JSON and needs Node 18 or newer. If Node is missing, say so and stop. `--session` stores the time of this session inside `.git`. Read only what the JSON points to; do not read the whole repo.
+It prints JSON and needs Node 18 or newer. If Node is missing, say so and stop. `--session` stores the time of this session inside `.git`; leave it out when the user asked for an audit (section 2), so an audit leaves nothing behind. Read only what the JSON points to; do not read the whole repo.
 
 ## 2. Pick the mode
 

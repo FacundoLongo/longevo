@@ -6,9 +6,10 @@ import { generatedFiles, LOCKFILE, VENDOR_DIR } from './lib/attributes.mjs';
 import { CODE_FILE } from './lib/coverage.mjs';
 import { livingDocs } from './lib/docs.mjs';
 import { matchesAny } from './lib/glob.mjs';
-import { git, gitCommand, listFiles, scope } from './lib/repo.mjs';
+import { git, gitCommand, gitInput, listFiles, scope } from './lib/repo.mjs';
 import { findRules } from './lib/rules.mjs';
 import { redactDeep, securityFindings } from './lib/security.mjs';
+import { declined } from './lib/state.mjs';
 import { analyzeTests, isTestFile } from './lib/tests.mjs';
 import { readText } from './lib/text.mjs';
 import { briefs } from './lib/work.mjs';
@@ -30,7 +31,12 @@ function defaultBranches(sc) {
 function resolveBase(sc, base) {
   if (!sc.isGit) return null;
   const head = commitOf(sc, 'HEAD');
-  if (!head) return null;
+  if (!head && base) throw new Error(`${base} is not a commit.`);
+  if (!head) {
+    // No commits yet: everything added to git or left untracked is new, so compare with the empty tree.
+    const empty = gitInput(sc.root, ['hash-object', '-t', 'tree', '--stdin'], '')?.trim();
+    return empty ? { ref: '(no commits)', commit: empty, fallback: 'no-commits' } : null;
+  }
   if (base) {
     if (!commitOf(sc, base)) throw new Error(`${base} is not a commit.`);
     const commit = mergeBase(sc, base);
@@ -82,7 +88,7 @@ const slugOf = (path) => path.split('/')[2]?.replace(/^\d{4}-\d{2}-\d{2}-/, '') 
 export function reviewReport(cwd, { base = null } = {}) {
   const sc = scope(cwd);
   const resolved = resolveBase(sc, base);
-  const empty = { version: VERSION, scope: sc, base: resolved, changed: [], diffCommand: null, diffLines: { added: 0, removed: 0 }, docsToUpdate: [], rules: [], tests: [], code: [], brief: null, security: [], nothing: true };
+  const empty = { version: VERSION, scope: sc, base: resolved, declined: declined(sc), changed: [], diffCommand: null, diffLines: { added: 0, removed: 0 }, docsToUpdate: [], rules: [], tests: [], code: [], brief: null, security: [], nothing: true };
   if (!resolved) return redactDeep(empty);
 
   const tracked = lines(git(sc.root, [...DIFF, '--name-status', resolved.commit])).map((row) => {

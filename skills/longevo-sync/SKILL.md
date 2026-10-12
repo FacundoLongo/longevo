@@ -13,7 +13,7 @@ Check the docs against the code and the external sources, and fix what drifted w
 node <this skill's folder>/scripts/longevo.mjs sync --cwd .
 ```
 
-It prints JSON and needs Node 18 or newer. Read only what it points to; the decisions come first (`findings`, `declined`, `coverage`, `sourcesFile`) and the diffs come last. If `docs`, `rules`, `sources` and `briefs.done` are all empty, say that there is nothing to check yet, suggest `longevo-init` to add frontmatter, and stop.
+It prints JSON and needs Node 18 or newer. Read only what it points to; the decisions come first (`findings`, `notChecked`, `declined`, `coverage`, `sourcesFile`) and the diffs come last. Say each line of `notChecked` in the report. If `docs`, `rules`, `sources` and `briefs.done` are all empty, say that there is nothing to check yet, suggest `longevo-init` to add frontmatter, and stop.
 
 If the user asks only for a report, do sections 2 to 5 without the list.
 
@@ -38,7 +38,7 @@ For each `source-not-checked` finding, follow [references/sources.md](references
 
 ## 5. Briefs marked done
 
-For each brief in `briefs.done`, propose its acceptance criteria as rules in `docs/domain/<area>.md` with the next free id, in the format of [references/rules-format.md](references/rules-format.md).
+For each brief in `briefs.done`, propose its acceptance criteria as rules in `docs/domain/<area>.md` with the next free id, in the format of [references/rules-format.md](references/rules-format.md). Each new rule's `Source` is the brief's path; once a rule cites it, the brief is no longer listed.
 
 ## 6. Ask, then propose
 

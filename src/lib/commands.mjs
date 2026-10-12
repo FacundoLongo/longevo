@@ -7,26 +7,35 @@ const TOOL = /^(?:npx|pnpx|bunx|go|pytest|python3?|uv|poetry|tox|cargo|node|deno
 const BUILTIN = new Set(['install', 'i', 'ci', 'add', 'remove', 'rm', 'exec', 'dlx', 'x', 'init', 'create', 'publish', 'update', 'upgrade', 'up', 'link', 'outdated', 'audit', 'why', 'run', 'login', 'version', 'help', 'dedupe', 'prune']);
 const SINGLE_TEST = /\s-t\s|--testNamePattern|\s-run\s|\s-k\s|::|--grep\s|--tests\s|-Dtest=|--filter[\s=]|-only-testing:|\S+\.(?:test|spec)\.[cm]?[jt]sx?\b|\S+_test\.go\b|\S*test_\S+\.py\b|\S+_spec\.rb\b|\S+_test\.(?:rb|exs|dart)\b|\bcargo test\s+[\w:]+/;
 
+// The scripts, targets and CI commands that exist, and which file defines each script and target.
 export function realCommands(root, files) {
   const scripts = new Set();
   const targets = new Set();
   const ci = [];
+  const defined = {};
+  const define = (key, file) => (defined[key] ??= []).push(file);
   for (const file of files) {
     if (/(^|\/)node_modules\//.test(file)) continue;
     if (/(^|\/)package\.json$/.test(file)) {
       try {
         const pkg = JSON.parse(readText(join(root, file)) ?? '{}');
-        for (const name of Object.keys(pkg.scripts ?? {})) scripts.add(name);
+        for (const name of Object.keys(pkg.scripts ?? {})) {
+          scripts.add(name);
+          define(`script:${name}`, file);
+        }
       } catch {
         // A broken package.json is reported by its own tools, not here.
       }
     } else if (/(^|\/)(?:GNUmakefile|[Mm]akefile|justfile)$/.test(file)) {
-      for (const match of (readText(join(root, file)) ?? '').matchAll(/^([\w.-]+)\s*:(?!=)/gm)) targets.add(match[1]);
+      for (const match of (readText(join(root, file)) ?? '').matchAll(/^([\w.-]+)\s*:(?!=)/gm)) {
+        targets.add(match[1]);
+        define(`target:${match[1]}`, file);
+      }
     } else if (/^\.github\/workflows\/[^/]+\.ya?ml$/.test(file)) {
       for (const match of (readText(join(root, file)) ?? '').matchAll(/^\s*(?:-\s*)?run:\s*([^|>\s].*)$/gm)) ci.push(match[1].trim());
     }
   }
-  return { scripts: [...scripts].sort(), targets: [...targets].sort(), ci };
+  return { scripts: [...scripts].sort(), targets: [...targets].sort(), ci, defined };
 }
 
 export function citedCommands(file, spans) {

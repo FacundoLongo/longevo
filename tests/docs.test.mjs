@@ -110,3 +110,24 @@ test('briefs and decisions with covers are records, not living docs', () => {
   const root = makeRepo({ 'docs/work/2026-10-01-x/brief.md': DOC, 'docs/decisions/pay.md': DOC, 'src/pay/a.ts': '1' });
   assert.deepEqual(docs(root).living, []);
 });
+
+test('a change that was later reverted does not make a doc stale', () => {
+  const root = makeRepo({ 'docs/pay.md': DOC, 'src/pay/a.ts': '1', 'src/pay/b.ts': '1' });
+  commit(root, { 'src/pay/a.ts': '2', 'src/pay/b.ts': '2' }, 'try something');
+  commit(root, { 'src/pay/a.ts': '1' }, 'revert a');
+  const [doc] = docs(root).living;
+  assert.deepEqual(doc.changed, ['src/pay/b.ts']);
+  commit(root, { 'src/pay/b.ts': '1' }, 'revert b');
+  assert.equal(docs(root).living[0].stale, false);
+});
+
+test('a new verified date that is not committed yet clears the doc', () => {
+  const root = makeRepo({ 'docs/pay.md': DOC, 'src/pay/a.ts': '1' });
+  commit(root, { 'src/pay/a.ts': '2' }, 'change pay');
+  writeFiles(root, { 'docs/pay.md': DOC.replace('# Pay', '# Payments') });
+  assert.equal(docs(root).living[0].stale, true);
+  writeFiles(root, { 'docs/pay.md': DOC.replace('2026-10-01', '2026-10-11') });
+  const [doc] = docs(root).living;
+  assert.equal(doc.stale, false);
+  assert.equal(doc.verified, '2026-10-11');
+});

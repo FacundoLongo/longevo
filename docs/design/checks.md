@@ -12,9 +12,9 @@ How `init` reviews a repo and its AGENTS.md, and how Longevo compares docs, code
 From cheap to expensive:
 
 1. **Scope:** the git root, or the folder you run it in and its parents.
-2. **Instruction files:** AGENTS.md, CLAUDE.md, GEMINI.md, `.cursor/rules`, Copilot instructions and skills, with their size, and the Gemini CLI setting that makes it read AGENTS.md.
+2. **Instruction files:** AGENTS.md, CLAUDE.md, GEMINI.md, `.cursor/rules`, Copilot instructions and skills, with their size, and the Gemini CLI setting that makes it read AGENTS.md. A file it cannot read (over 1 MB, or with NUL bytes) is a finding, not an empty file.
 3. **Workspaces:** pnpm, npm and yarn workspaces, turbo, nx, lerna, go.work, Cargo, uv, Gradle, Maven and `.sln`. Each package is an area.
-4. **Real commands:** manifests, Makefile, CI and pre-commit hooks.
+4. **Real commands:** manifests, Makefile, CI and pre-commit hooks, with the file that defines each script and target.
 5. **Cross-check:** commands and paths in the instructions against what exists.
 6. **Git history:** the 10 files that changed most in the last year, without lockfiles, generated code or commits that touch more than 100 files.
 7. **Agent setup:** MCP server names and installed skills, in the repo and in your home folder. Never credentials, `env`, arguments or URLs. The report names each home file it read.

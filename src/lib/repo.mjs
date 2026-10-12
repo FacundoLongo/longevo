@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readdirSync, realpathSync } from 'node:fs';
+import { readdirSync, realpathSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 
 // On macOS, /usr/bin/git is a shim that runs xcrun, and xcrun fails inside sandboxes because it cannot
@@ -57,8 +57,9 @@ export function scope(cwd) {
   try {
     dir = realpathSync(dir);
   } catch {
-    // A missing folder fails later with a clear git or fs error.
+    throw new Error(`${cwd} does not exist.`);
   }
+  if (!statSync(dir).isDirectory()) throw new Error(`${cwd} is not a folder.`);
   const top = git(dir, ['rev-parse', '--show-toplevel']);
   if (top === null) return { isGit: false, root: dir, cwd: dir, shallow: false };
   const shallow = (git(dir, ['rev-parse', '--is-shallow-repository']) ?? '').trim() === 'true';

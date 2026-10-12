@@ -18,10 +18,19 @@ export function renderBlock({ commands = [], triggers = [], testingDoc = false, 
 }
 
 // Markers count only as whole lines. One marker without the other, or two blocks, stop the write.
+// Markers inside a code fence are an example of the block, not the block.
 function markerLines(text) {
   const lines = text.split('\n');
-  const starts = lines.flatMap((line, index) => (line.trim() === START ? [index] : []));
-  const ends = lines.flatMap((line, index) => (line.trim() === END ? [index] : []));
+  let inFence = false;
+  const kept = lines.map((line) => {
+    if (/^\s*(```|~~~)/.test(line)) {
+      inFence = !inFence;
+      return null;
+    }
+    return inFence ? null : line.trim();
+  });
+  const starts = kept.flatMap((line, index) => (line === START ? [index] : []));
+  const ends = kept.flatMap((line, index) => (line === END ? [index] : []));
   return { lines, starts, ends };
 }
 
@@ -43,11 +52,16 @@ export function readBlock(text) {
   }
 }
 
+// A file with CRLF line endings keeps them.
 export function writeBlock(text, lines) {
   const block = [START, ...lines, END];
   if (text === null || text === '') return `${block.join('\n')}\n`;
+  const eol = text.includes('\r\n') ? '\r\n' : '\n';
   const found = findBlock(text);
-  if (found.start !== -1) return [...found.lines.slice(0, found.start), ...block, ...found.lines.slice(found.end + 1)].join('\n');
-  const gap = text.endsWith('\n\n') ? '' : text.endsWith('\n') ? '\n' : '\n\n';
-  return `${text}${gap}${block.join('\n')}\n`;
+  if (found.start !== -1) {
+    const cr = eol === '\r\n' ? '\r' : '';
+    return [...found.lines.slice(0, found.start), ...block.map((line) => `${line}${cr}`), ...found.lines.slice(found.end + 1)].join('\n');
+  }
+  const gap = text.endsWith(`${eol}${eol}`) ? '' : text.endsWith(eol) ? eol : `${eol}${eol}`;
+  return `${text}${gap}${block.join(eol)}${eol}`;
 }

@@ -22,7 +22,7 @@ JSON
 | `decline` | `keys` | The keys of changes the user did not pick, inside `.git` |
 | `undecline` | `keys`, or `all: true` | Forgets declined changes, so they can be proposed again |
 
-Each one prints `{"op", "file", "status"}` with `written` or `unchanged`, or `{"error"}` and then writes nothing. Paths and globs are relative to the repo root.
+Each one prints `{"op", "file", "status"}` with `written` or `unchanged`, or `{"error"}` and then writes nothing. `block` also prints `lines` (`before` and `after`). `decline` and `undecline` print `declined`, the full list; outside git they print `stored: false` and a note, because there is no `.git` to keep it in. Paths and globs are relative to the repo root, except `import.file`, which is relative to the folder you scanned.
 
 ## Keys
 

@@ -25,6 +25,8 @@ One row per finding, most severe first: severity, what is wrong, evidence (`file
 | Command in the instructions | Exists | Where |
 | --- | --- | --- |
 
+`Where` is the `where` list of each command in `commands.cited`: the package.json, Makefile or justfile that defines it.
+
 Add the real test command from `commands.real` (scripts, targets, CI and hooks) when the instructions miss it.
 
 ## 5. Tests and docs

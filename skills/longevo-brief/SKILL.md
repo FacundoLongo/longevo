@@ -45,7 +45,7 @@ Ask only what the code, the docs and the task cannot answer, one question at a t
 
 Show the brief, then a one-item list:
 
-1. Save it to `docs/work/<today>-<slug>/brief.md` (key `brief:<slug>`).
+1. Save it to `docs/work/<today>-<slug>/brief.md`.
 
 > Which ones do I apply? [All / Pick numbers / None]
 
@@ -64,7 +64,7 @@ If the user picks it:
 2. Fill its sections with your edit tool, exactly as you showed them.
 3. Show the path.
 
-Never stage or commit. If the user does not pick it, run `apply decline` with the key.
+Never stage or commit. If the user does not pick it, save nothing; the brief was shown, and asking for it again shows it again.
 
 ## 7. Next step
 

@@ -67,3 +67,26 @@ test('writes a list of maps as a block', () => {
   assert.equal(out, '---\ncovers: ["a/**"]\nsources:\n  - url: https://linear.app/x/1\n    checked: 2026-10-11\n  - url: https://notion.so/p\n    checked: 2026-09-01\n---\n# A\n');
   assert.deepEqual(parseFrontmatter(out).data.sources[1], { url: 'https://notion.so/p', checked: '2026-09-01' });
 });
+
+test('reads escapes in double-quoted values', () => {
+  const { data, error } = parseFrontmatter('---\ntitle: "Say \\"hi\\" \\u00e9 \\\\ ok"\ntask: "#12" # the issue\n---\n');
+  assert.equal(error, null);
+  assert.equal(data.title, 'Say "hi" é \\ ok');
+  assert.equal(data.task, '#12');
+});
+
+test('reads nested maps and block text of other tools and keeps them when writing', () => {
+  const text = '---\nmeta:\n  author: Ana\n  tags: [a, b]\ndescription: |\n  Line one.\n  Line two: with a colon.\ncovers: ["src/**"]\n---\n# A\n';
+  const parsed = parseFrontmatter(text);
+  assert.equal(parsed.error, null);
+  assert.deepEqual(parsed.data.covers, ['src/**']);
+  assert.deepEqual(parsed.data.meta, { author: 'Ana', tags: ['a', 'b'] });
+  assert.equal(parsed.data.description, 'Line one.\nLine two: with a colon.');
+  assert.equal(setFrontmatter(text, { verified: '2026-10-11' }), text.replace('covers: ["src/**"]\n', 'covers: ["src/**"]\nverified: 2026-10-11\n'));
+});
+
+test('TOML frontmatter is reported as not supported and never gets a second block', () => {
+  const text = '+++\ntitle = "A"\n+++\n# A\n';
+  assert.match(parseFrontmatter(text).error, /TOML frontmatter \(\+\+\+\) is not supported/);
+  assert.throws(() => setFrontmatter(text, { verified: '2026-10-11' }), /TOML/);
+});

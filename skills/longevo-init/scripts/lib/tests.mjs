@@ -4,7 +4,7 @@ import { readText } from './text.mjs';
 const TEST_FILE = new RegExp([
   '_test\\.go$', '\\.(test|spec)\\.[cm]?[jt]sx?$', '(^|/)test_[^/]+\\.py$', '_test\\.py$', 'Tests?\\.swift$',
   '(Test|Tests|IT)\\.(java|kt)$', 'Tests?\\.cs$', '_(spec|test)\\.rb$', 'Test\\.php$', '(^|/)tests/[^/]+\\.rs$',
-  '_test\\.exs$', '_test\\.dart$',
+  '_test\\.exs$', '_test\\.dart$', '(^|/)__tests__/.+\\.[cm]?[jt]sx?$',
 ].join('|'));
 const STORAGE_MOCK = new RegExp([
   'sqlmock|MockStorage|mockStorage|NewMockStore',
@@ -18,28 +18,88 @@ const STORAGE_MOCK = new RegExp([
   'Mox\\.(?:expect|stub)\\(\\s*\\w*Repo',
 ].join('|'), 'i');
 const CALL_ASSERT = /toHaveBeenCalled(?:With|Times)?\(|\.EXPECT\(\)|\.Times\(|assert_called(?:_once)?(?:_with)?\(|\bverify\(|\.Verify\(|\.Received\(|have_received\(|\.to receive\(|->expects\(/g;
+const E2E = /(^|\/)(e2e|cypress|playwright|ui-?tests?)(\/|$)|[._-]e2e[._-]|\.cy\.[cm]?[jt]sx?$/i;
+const INTEGRATION = /(^|\/)(integration|integration[-_]tests?|it)\/|[._-]integration[._-]|\.int\.(test|spec)\./i;
+const JAVA_IT = /IT\.(java|kt)$/;
+
+export function testKind(file) {
+  if (E2E.test(file)) return 'e2e';
+  if (INTEGRATION.test(file) || JAVA_IT.test(file)) return 'integration';
+  return 'other';
+}
+
 const GROUPING = new Set(['packages', 'apps', 'services', 'internal', 'cmd', 'src', 'libs']);
 
-export function areaOf(file) {
+// The area of a file: the deepest workspace package that holds it, or a guess from its first folders.
+const packageSets = new WeakMap();
+
+export function areaOf(file, packages = []) {
+  if (packages.length) {
+    if (!packageSets.has(packages)) packageSets.set(packages, new Set(packages));
+    const set = packageSets.get(packages);
+    for (let dir = file.slice(0, file.lastIndexOf('/')); dir; dir = dir.includes('/') ? dir.slice(0, dir.lastIndexOf('/')) : '') {
+      if (set.has(dir)) return dir;
+    }
+  }
   const parts = file.split('/');
   if (parts.length === 1) return '.';
   if (GROUPING.has(parts[0]) && parts.length > 2) return `${parts[0]}/${parts[1]}`;
   return parts[0];
 }
 
-export function testInventory(root, files, maxFiles = 5000) {
-  const testFiles = files.filter((file) => TEST_FILE.test(file) && !/(^|\/)(node_modules|vendor)\//.test(file));
-  const byArea = {};
-  for (const file of testFiles) byArea[areaOf(file)] = (byArea[areaOf(file)] ?? 0) + 1;
-  const antiGoldenCandidates = [];
-  for (const file of testFiles.slice(0, maxFiles)) {
-    const text = readText(join(root, file));
-    if (text === null) continue;
-    const reasons = [];
-    if (STORAGE_MOCK.test(text)) reasons.push('mocks storage');
-    const calls = text.match(CALL_ASSERT)?.length ?? 0;
-    if (calls >= 3) reasons.push(`${calls} assertions on calls`);
-    if (reasons.length) antiGoldenCandidates.push({ file, reasons });
+// True when the match starts inside a string literal on its line, like a fixture that holds test code as text.
+function insideString(line, index) {
+  let quote = null;
+  for (let i = 0; i < index; i += 1) {
+    const char = line[i];
+    if (quote) {
+      if (char === '\\') i += 1;
+      else if (char === quote) quote = null;
+    } else if (char === '"' || char === "'" || char === '`') {
+      quote = char;
+    }
   }
-  return { total: testFiles.length, byArea, antiGoldenCandidates };
+  return quote !== null;
+}
+
+// Matches of a pattern that are code, not text inside a string literal.
+function codeMatches(text, pattern, flags) {
+  return [...text.matchAll(new RegExp(pattern.source, flags))].filter((match) => {
+    const lineStart = text.lastIndexOf('\n', match.index - 1) + 1;
+    return !insideString(text.slice(lineStart, match.index), match.index - lineStart);
+  });
+}
+
+const mocksStorage = (text) => codeMatches(text, STORAGE_MOCK, 'gi').length > 0;
+
+export const isTestFile = (file) => TEST_FILE.test(file) && !/(^|\/)(node_modules|vendor)\//.test(file);
+
+// One row per test file: its area, its kind and the signals that make it an anti-golden candidate.
+export function analyzeTests(root, files, packages = [], maxFiles = 5000) {
+  return files.filter(isTestFile).map((file, index) => {
+    const text = index < maxFiles ? readText(join(root, file)) : null;
+    return {
+      file,
+      area: areaOf(file, packages),
+      kind: testKind(file),
+      mocksStorage: text !== null && mocksStorage(text),
+      callAsserts: text === null ? 0 : codeMatches(text, CALL_ASSERT, 'g').length,
+    };
+  });
+}
+
+export function testInventory(root, files, { packages = [] } = {}) {
+  const rows = analyzeTests(root, files, packages);
+  const byArea = {};
+  const byKind = { e2e: 0, integration: 0, other: 0 };
+  const antiGoldenCandidates = [];
+  for (const row of rows) {
+    byArea[row.area] = (byArea[row.area] ?? 0) + 1;
+    byKind[row.kind] += 1;
+    const reasons = [];
+    if (row.mocksStorage) reasons.push('mocks storage');
+    if (row.callAsserts >= 3) reasons.push(`${row.callAsserts} assertions on calls`);
+    if (reasons.length) antiGoldenCandidates.push({ file: row.file, reasons });
+  }
+  return { total: rows.length, byArea, byKind, antiGoldenCandidates };
 }

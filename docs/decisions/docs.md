@@ -19,7 +19,7 @@ Status: Accepted · 2026-10-11
 
 ## D4. Anchor drift checks to the commit that changed `verified`
 
-Status: Accepted · 2026-10-11
+Status: Superseded by D11
 
 **Context.** A living doc lists the code it covers in `covers`, and Longevo must know if that code changed after the last check. A stored commit SHA fails twice: a commit cannot contain its own SHA, and squash merges remove SHAs.
 
@@ -34,7 +34,7 @@ Status: Accepted · 2026-10-11
 
 ## D6. Keep a generated coverage record in the repo
 
-Status: Accepted · 2026-10-11
+Status: Superseded by D8
 
 **Context.** People want to know what is tested and where, and which code has a doc. The gap report is generated on demand and is not kept.
 
@@ -46,3 +46,60 @@ Status: Accepted · 2026-10-11
 - Any agent can read the current state without running anything.
 - The file changes on every sync, so its diffs must stay small.
 - It is built in step 2.
+
+## D8. Store dates, not stale status, in the coverage record
+
+Status: Accepted · 2026-10-11
+
+**Context.** D6 asked `docs/coverage.md` to show code with or without a current doc. Whether a doc is current changes with every commit to its `covers`, so storing it would change the file all the time. Stale detection also moves from step 3 to step 2.
+
+**Options.** Store the stale status · Store the `verified` date and show stale docs on each run
+
+**Decision.** `init`, and `sync` from step 3, generate `docs/coverage.md` with three tables by area: tests by kind, docs with their `verified` date, and rules when there are any. It has no timestamps. The scan finds stale docs on each run, and `init` shows them in the session update. Each brief still keeps the testing skill's tables.
+
+**Consequences.**
+- The file changes only when tests or docs change, so its diffs stay small.
+- To know which docs are stale, you run `init`.
+
+## D9. Keep Longevo's docs in `docs/` and its state in `.git`
+
+Status: Accepted · 2026-10-11
+
+**Context.** Longevo writes docs, a coverage record and some state, like the date of the last session and the changes you declined. They could live in the repo's `docs/`, in a `.longevo/` folder, or with a `.longevo.json` config file.
+
+**Options.** `docs/` and `.git/longevo/` · A `.longevo/` folder · `docs/` plus a `.longevo.json` config
+
+**Decision.** Docs go in `docs/`, where people and agents look first. State for each machine goes in `.git/longevo/`, so it is never committed. Generated and vendored code is read from `linguist-generated` and `linguist-vendored` in `.gitattributes`. No config file until a real setting needs one.
+
+**Consequences.**
+- No hidden folder and no extra files in pull requests.
+- A new clone asks again about changes you declined in another clone.
+
+## D11. Anchor drift on the frontmatter `verified` value, with a time for a second check in one day
+
+Status: Accepted · 2026-10-11
+
+**Context.** D4 took the last commit that matched `git log -G'^verified:'` and stored a date. Running Longevo on its own repo showed two gaps: a `verified:` line in an example inside the doc moved the anchor, and a second check on the same day could not change the line, so the doc stayed stale until the next day.
+
+**Options.** Keep D4 · Always store a full timestamp · Keep the date, and add the time only when the date is already today's
+
+**Decision.** The anchor is the newest commit whose frontmatter `verified` value differs from the one in its parent; `git log -G` only finds the candidates. `verified` stays `YYYY-MM-DD`, and a second check on the same day writes `YYYY-MM-DDTHH:MM:SS`. Squash and rebase merges still work, as in D4. This supersedes D4.
+
+**Consequences.**
+- Examples in a doc's body never move the anchor, and a doc can be checked twice in one day.
+- Most docs keep a plain date; a few show a time.
+- One more git call for each candidate commit.
+
+## D12. Count big commits in drift checks
+
+Status: Accepted · 2026-10-11
+
+**Context.** Drift checks skipped commits that touch more than 100 files, to ignore repo-wide reformats. A squash merge of a large change is also such a commit, so the docs it made wrong never went stale.
+
+**Options.** Keep the limit · Count every commit · Count big commits only for whitespace changes
+
+**Decision.** Drift counts every commit after the anchor, big ones included; lockfiles and generated files still do not count. The 100-file limit stays only for hotspots.
+
+**Consequences.**
+- A squash merge or a large change always makes the docs it touches stale.
+- A repo-wide reformat makes the docs it touches stale once; `sync` confirms them with new `verified` dates and no text changes.

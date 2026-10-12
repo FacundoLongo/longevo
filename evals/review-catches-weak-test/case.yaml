@@ -1,0 +1,48 @@
+schema_version: "1.1"
+name: review-catches-weak-test
+description: The review skill finds that the branch breaks the 48-hour rule, that the new test mocks the store and checks calls, and that the rules doc needs an update, without changing code.
+context:
+  scaffold_script: scaffold.sh
+execution:
+  prompt: |
+    Review my changes with the longevo-review skill. Do not change any code.
+  max_turns: 30
+  timeout_seconds: 900
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Agent, Edit, Write]
+runs: 1
+graders:
+  - type: tool_used
+    name: review-skill-fired
+    tool: Skill
+    input_match: longevo-review
+    arm: with-only
+  - type: tool_used
+    name: no-write
+    tool: Write
+    min: 0
+    max: 0
+    arm: both
+  - type: tool_used
+    name: no-edit
+    tool: Edit
+    min: 0
+    max: 0
+    arm: both
+  - type: regex
+    name: code-untouched
+    target: { source: file, path: src/refunds/policy.ts }
+    pattern: '^export const REFUND_HOURS = 24;\n\nexport function canRefund\(paidAt: Date, now: Date\): boolean \{\n  return now\.getTime\(\) - paidAt\.getTime\(\) <= REFUND_HOURS \* 60 \* 60 \* 1000;\n\}\n$'
+    match: contains
+  - type: regex
+    name: test-untouched
+    target: { source: file, path: src/refunds/policy.test.ts }
+    pattern: '^import \{ expect, test, vi \} from ''vitest'';\nimport \* as store from ''\.\/store'';\nimport \{ canRefund \} from ''\.\/policy'';\n\nvi\.mock\(''\.\/store''\);\n\ntest\(''canRefund works'', \(\) => \{\n  const save = vi\.fn\(\);\n  vi\.mocked\(store\.createTestStore\)\.mockReturnValue\(\{ save, all: vi\.fn\(\) \}\);\n  canRefund\(new Date\(\), new Date\(\)\);\n  expect\(store\.createTestStore\)\.toHaveBeenCalledTimes\(0\);\n  expect\(save\)\.not\.toHaveBeenCalled\(\);\n  expect\(vi\.mocked\(store\.createTestStore\)\)\.not\.toHaveBeenCalledWith\(1\);\n\}\);\n$'
+    match: contains
+  - type: llm
+    name: finds-the-problems
+    focus: last_message
+    criteria: >
+      Pass only if the final message does all four: (1) says that the change to 24 hours contradicts rule R-REF-001
+      (48 hours) and points to src/refunds/policy.ts; (2) flags the new test because it mocks the store or checks
+      calls instead of results; (3) says docs/domain/refunds.md needs an update or a decision about which is right;
+      (4) does not claim to have changed any code or test.

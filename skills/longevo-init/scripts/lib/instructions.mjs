@@ -1,6 +1,8 @@
-import { statSync } from 'node:fs';
+import { realpathSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { dirOf } from './paths.mjs';
 import { git } from './repo.mjs';
+import { fenceKinds, unreadableReason } from './text.mjs';
 
 const PATTERNS = [
   /(^|\/)AGENTS\.md$/,
@@ -15,7 +17,9 @@ const PATTERNS = [
 ];
 
 const base = (file) => file.split('/').pop();
-const dirOf = (file) => (file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '');
+
+// An @AGENTS.md import in CLAUDE.md, also written as @./AGENTS.md or @../AGENTS.md.
+export const IMPORTS_AGENTS = /(^|\s)@(?:\.{1,2}\/)*AGENTS\.md\b/m;
 
 // The folder an instruction file applies to: .cursor/rules, .github and .claude belong to their parent.
 function ownerDir(file) {
@@ -25,8 +29,12 @@ function ownerDir(file) {
     .replace(/(^|\/)\.claude$/, '');
 }
 
-// Text outside code, so an example in backticks is not read as an import.
-const prose = (text) => text.replace(/```[\s\S]*?```/g, '').replace(/`[^`\n]*`/g, '');
+// Text outside code, so an example in backticks or in a fence is not read as an import.
+export function prose(text) {
+  const lines = text.split('\n');
+  const kinds = fenceKinds(lines);
+  return lines.filter((_, index) => !kinds[index]).join('\n').replace(/`[^`\n]*`/g, '');
+}
 
 function rawSize(root, path, text) {
   try {
@@ -50,17 +58,19 @@ export function findInstructionFiles(files, dirs) {
 export function inventory(sc, files, texts) {
   return files.map((path) => ({
     path,
+    ...(texts[path] === null ? { unreadable: unreadableReason(join(sc.root, path)) } : {}),
     lines: texts[path] ? texts[path].replace(/\n$/, '').split('\n').length : 0,
     bytes: rawSize(sc.root, path, texts[path]),
     commits: sc.isGit && !sc.shallow ? Number((git(sc.root, ['rev-list', '--count', 'HEAD', '--', path]) ?? '0').trim()) : null,
   }));
 }
 
-export function whoLoads(dirs, files, texts) {
+export function whoLoads(dirs, files, texts, { geminiFiles = ['GEMINI.md'], aliases = new Map() } = {}) {
   const inChain = (name) => files.filter((file) => base(file) === name && dirs.includes(ownerDir(file)));
   const claudeFiles = [...inChain('CLAUDE.md'), ...inChain('CLAUDE.local.md')];
   const agentsFiles = inChain('AGENTS.md');
-  const importsAgents = claudeFiles.some((file) => /(^|\s)@(\.\/)?AGENTS\.md\b/m.test(prose(texts[file] ?? '')));
+  const sameAsAgents = (file) => (aliases.get(file) ?? []).some((member) => base(member) === 'AGENTS.md');
+  const importsAgents = claudeFiles.some((file) => sameAsAgents(file) || IMPORTS_AGENTS.test(prose(texts[file] ?? '')));
   const claude = claudeFiles.length ? [...claudeFiles, ...(importsAgents ? agentsFiles : [])] : agentsFiles;
   const codex = dirs.flatMap((dir) => {
     const prefix = dir ? `${dir}/` : '';
@@ -69,11 +79,13 @@ export function whoLoads(dirs, files, texts) {
     return override ? [override] : agents ? [agents] : [];
   });
   const cursor = [...agentsFiles, ...files.filter((file) => /(^|\/)\.cursor\/rules\/.+\.mdc$/.test(file) || base(file) === '.cursorrules')];
-  const gemini = inChain('GEMINI.md');
-  const copilot = [
+  const gemini = [...new Set(geminiFiles.flatMap(inChain))];
+  const copilot = [...new Set([
     ...files.filter((file) => /(^|\/)\.github\/(copilot-instructions\.md|instructions\/.+\.instructions\.md)$/.test(file)),
-    ...agentsFiles.slice(-1),
-  ];
+    ...agentsFiles,
+    ...inChain('CLAUDE.md'),
+    ...inChain('GEMINI.md'),
+  ])].sort();
   return { 'claude-code': claude, codex, cursor, gemini, copilot };
 }
 
@@ -82,6 +94,10 @@ export function instructionFindings(inv, loads) {
   const claude = loads['claude-code'];
   const claudeFiles = claude.filter((file) => base(file).startsWith('CLAUDE'));
   const hasAgents = loads.codex.length > 0;
+  for (const file of inv.filter((f) => f.unreadable)) {
+    const fix = file.unreadable.includes('link') ? 'fix or remove the link' : 'save it as UTF-8 text';
+    findings.push({ id: 'instruction-unreadable', severity: 'medium', evidence: [file.path], message: `Longevo could not read ${file.path}: ${file.unreadable}. Its rules were not checked; ${fix}.` });
+  }
   if (!claude.length && !hasAgents) {
     findings.push({ id: 'no-entry-file', severity: 'high', message: 'There is no AGENTS.md or CLAUDE.md in this folder or its parents.' });
   }
@@ -94,7 +110,7 @@ export function instructionFindings(inv, loads) {
     });
   }
   if (claudeFiles.length && !hasAgents) {
-    findings.push({ id: 'only-claude-md', severity: 'medium', evidence: claudeFiles, message: 'The rules live only in CLAUDE.md. Codex, Cursor and Copilot do not load it.' });
+    findings.push({ id: 'only-claude-md', severity: 'medium', evidence: claudeFiles, message: 'The rules live only in CLAUDE.md. Codex, Cursor and Gemini CLI do not load it.' });
   }
   for (const file of inv) {
     if (base(file.path) === 'CLAUDE.md' && file.lines > 200) {
@@ -112,4 +128,53 @@ export function instructionFindings(inv, loads) {
     findings.push({ id: 'claude-local-hides-agents', severity: 'low', message: 'CLAUDE.local.md exists, so Claude Code ignores AGENTS.md on this machine.' });
   }
   return findings;
+}
+
+// True when a file has rules of its own, not only a title and an import.
+function hasOwnRules(text = '') {
+  const body = text.replace(/^---\n[\s\S]*?\n---\n?/, '');
+  return body.split('\n').some((line) => line.trim() && !/^\s*#/.test(line) && !/^\s*@\S+\s*$/.test(line));
+}
+
+// Instruction files in the chain that some agent in use does not load.
+export function unsharedRules(dirs, inv, texts, loads, inUse, aliases = new Map()) {
+  const findings = [];
+  const reported = new Set();
+  for (const { path } of inv) {
+    if (base(path) === 'CLAUDE.local.md' || reported.has(path) || !dirs.includes(ownerDir(path)) || !hasOwnRules(texts[path])) continue;
+    // Files that are the same file on disk count once: an agent that loads any of them sees the rules.
+    const members = aliases.get(path) ?? [path];
+    members.forEach((member) => reported.add(member));
+    const missing = inUse.filter((agent) => !members.some((member) => loads[agent].includes(member)));
+    if (missing.length) {
+      findings.push({
+        id: 'rules-not-shared',
+        severity: 'high',
+        evidence: [path],
+        agents: missing,
+        message: `${path} has rules that ${missing.join(', ')} ${missing.length === 1 ? 'does' : 'do'} not load.`,
+      });
+    }
+  }
+  return findings;
+}
+
+// Instruction files that are the same file on disk (CLAUDE.md -> AGENTS.md, or the other way): one text for
+// every agent. Returns each such file with the files it shares its real path with.
+export function linkedFiles(root, files) {
+  const real = (file) => {
+    try {
+      return realpathSync(join(root, file));
+    } catch {
+      return null;
+    }
+  };
+  const byReal = new Map();
+  for (const file of files) {
+    const target = real(file);
+    if (target) byReal.set(target, [...(byReal.get(target) ?? []), file]);
+  }
+  const groups = new Map();
+  for (const members of byReal.values()) if (members.length > 1) for (const file of members) groups.set(file, members);
+  return groups;
 }

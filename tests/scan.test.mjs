@@ -1,12 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { scan } from '../skills/longevo-init/scripts/scan.mjs';
+import { scan as scanWithHome } from '../src/scan.mjs';
 import { gitIn, makeRepo, writeFiles } from './helpers/fixture.mjs';
+
+// Tests never read the real home folder.
+const EMPTY_HOME = realpathSync(mkdtempSync(join(tmpdir(), 'longevo-home-')));
+const scan = (cwd, options = {}) => scanWithHome(cwd, { home: EMPTY_HOME, ...options });
 
 const ids = (report) => report.findings.map((f) => f.id);
 
@@ -134,12 +138,12 @@ test('marks the session and lists commits since the last one', () => {
 
 test('the CLI prints JSON when it runs through a symlink', () => {
   const root = makeRepo({ 'AGENTS.md': '# Rules\n' });
-  const real = fileURLToPath(new URL('../skills/longevo-init/scripts/scan.mjs', import.meta.url));
-  const link = join(realpathSync(mkdtempSync(join(tmpdir(), 'longevo-link-'))), 'scan.mjs');
+  const real = fileURLToPath(new URL('../src/longevo.mjs', import.meta.url));
+  const link = join(realpathSync(mkdtempSync(join(tmpdir(), 'longevo-link-'))), 'longevo.mjs');
   symlinkSync(real, link);
-  const result = spawnSync(process.execPath, [link, '--cwd', root], { encoding: 'utf8' });
+  const result = spawnSync(process.execPath, [link, 'scan', '--cwd', root], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(JSON.parse(result.stdout).version, 1);
+  assert.equal(JSON.parse(result.stdout).version, 2);
 });
 
 test('never prints a secret from a path, a script name or a commit subject', () => {
@@ -229,4 +233,64 @@ test('recognizes tests, storage mocks and single-test commands across languages'
   assert.equal(report.tests.total, 7);
   assert.equal(report.tests.antiGoldenCandidates.length, 7);
   assert.ok(!report.findings.some((f) => f.id === 'no-single-test-command'));
+});
+
+test('the version 2 report has every field, also outside git', () => {
+  for (const git of [true, false]) {
+    const root = makeRepo({ 'AGENTS.md': '# R\n', 'src/a.ts': '1' }, { git });
+    const report = scan(root);
+    assert.equal(report.version, 2);
+    for (const key of ['home', 'workspaces', 'hotspots', 'hooks', 'agents', 'docs', 'block', 'coverage', 'declined']) {
+      assert.ok(key in report, `${key} missing (git: ${git})`);
+    }
+    assert.deepEqual(report.block, { file: 'AGENTS.md', exists: false, lines: null });
+    assert.equal(report.coverage.exists, false);
+    assert.deepEqual(report.declined, []);
+  }
+});
+
+test('reports the Longevo block and hook commands', () => {
+  const root = makeRepo({ 'AGENTS.md': '# R\n<!-- longevo:start -->\n## Longevo\n- x\n<!-- longevo:end -->\n', 'lefthook.yml': 'pre-commit:\n  commands:\n    lint:\n      run: pnpm lint\n' });
+  const report = scan(root);
+  assert.deepEqual(report.block, { file: 'AGENTS.md', exists: true, lines: 2 });
+  assert.deepEqual(report.commands.real.hooks, ['pnpm lint']);
+  assert.deepEqual(report.hooks.map((h) => h.tool), ['lefthook']);
+});
+
+test('reads UTF-16 instruction files and reports the ones it cannot read', () => {
+  const root = makeRepo({ 'src/a.ts': '1' });
+  writeFileSync(join(root, 'AGENTS.md'), Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('# Rules\n- Run `npm test`\n', 'utf16le')]));
+  writeFileSync(join(root, 'CLAUDE.md'), Buffer.from('# Claude\n\0\0binary\n'));
+  const report = scan(root);
+  assert.equal(report.instructions.files.find((f) => f.path === 'AGENTS.md').lines, 2);
+  const unreadable = report.findings.filter((f) => f.id === 'instruction-unreadable');
+  assert.deepEqual(unreadable.map((f) => f.evidence), [['CLAUDE.md']]);
+  assert.match(unreadable[0].message, /NUL bytes/);
+});
+
+test('says which package.json or Makefile defines each cited command', () => {
+  const root = makeRepo({
+    'AGENTS.md': '# Rules\n- `pnpm test`\n- `pnpm lint`\n- `make build`\n- `pnpm gone`\n',
+    'package.json': '{"scripts":{"test":"vitest"}}',
+    'web/package.json': '{"scripts":{"lint":"eslint ."}}',
+    Makefile: 'build:\n\tgo build ./...\n',
+  });
+  const where = Object.fromEntries(scan(root).commands.cited.map((c) => [c.text, c.where]));
+  assert.deepEqual(where, { 'pnpm test': ['package.json'], 'pnpm lint': ['web/package.json'], 'make build': ['Makefile'], 'pnpm gone': [] });
+});
+
+test('call assertions inside a string literal, like a fixture, do not count', () => {
+  const fixture = "const code = \"expect(a).toHaveBeenCalled(); expect(b).toHaveBeenCalledWith(1); expect(c).toHaveBeenCalledTimes(2)\";\ntest('x', () => {});\n";
+  const root = makeRepo({ 'src/a.test.ts': fixture });
+  assert.deepEqual(scan(root).tests.antiGoldenCandidates, []);
+});
+
+test('an instruction file deleted but not staged is gone, not unreadable', () => {
+  const root = makeRepo({ 'AGENTS.md': '# Rules\n- `npm test`\n', 'CLAUDE.md': '@AGENTS.md\n' });
+  gitIn(root, 'rm', '-q', '--cached', 'CLAUDE.md');
+  gitIn(root, 'add', 'CLAUDE.md');
+  rmSync(join(root, 'CLAUDE.md'));
+  const report = scan(root);
+  assert.equal(report.findings.some((f) => f.id === 'instruction-unreadable'), false);
+  assert.deepEqual(report.instructions.files.map((f) => f.path), ['AGENTS.md']);
 });

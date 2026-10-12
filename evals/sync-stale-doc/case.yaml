@@ -1,0 +1,84 @@
+schema_version: "1.1"
+name: sync-stale-doc
+description: The code moved the refund window from 48 to 72 hours after the doc was verified. Sync fixes the doc and its rule to match the code and does not touch the code.
+context:
+  scaffold_script: scaffold.sh
+execution:
+  prompt: |
+    Bring the docs up to date with the longevo-sync skill. Apply everything you propose: my answer to
+    "Which ones do I apply?" is All. If you would ask me something, choose what the code and the commits show
+    and say what you chose.
+  max_turns: 30
+  timeout_seconds: 900
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Edit, Write]
+runs: 1
+graders:
+  - type: tool_used
+    name: sync-skill-fired
+    tool: Skill
+    input_match: longevo-sync
+    arm: with-only
+  - type: regex
+    name: doc-says-72
+    target: { source: file, path: docs/domain/refunds.md }
+    pattern: '72 hours'
+    match: contains
+  - type: regex
+    name: doc-drops-48
+    target: { source: file, path: docs/domain/refunds.md }
+    pattern: '48 hours'
+    match: not_contains
+  - type: regex
+    name: scenario-follows-code
+    target: { source: file, path: docs/domain/refunds.md }
+    pattern: '49 hours'
+    match: not_contains
+  - type: regex
+    name: verified-date-moved
+    target: { source: file, path: docs/domain/refunds.md }
+    pattern: 'verified: 2026-01-15'
+    match: not_contains
+  - type: regex
+    name: verified-date-present
+    target: { source: file, path: docs/domain/refunds.md }
+    pattern: '\nverified: \d{4}-\d{2}-\d{2}'
+    match: contains
+  - type: regex
+    name: code-untouched
+    target: { source: file, path: src/refunds/policy.ts }
+    pattern: '^export const REFUND_HOURS = 72;\n\nexport function canRefund\(paidAt: Date, now: Date\): boolean \{\n  return now\.getTime\(\) - paidAt\.getTime\(\) <= REFUND_HOURS \* 60 \* 60 \* 1000;\n\}\n$'
+    match: contains
+  - type: regex
+    name: test-untouched
+    target: { source: file, path: src/refunds/policy.test.ts }
+    pattern: '^import \{ expect, test \} from ''vitest'';\nimport \{ canRefund \} from ''\.\/policy'';\n\ntest\(''rejects a refund after 72 hours'', \(\) => \{\n  const paidAt = new Date\(''2026-01-01T00:00:00Z''\);\n  expect\(canRefund\(paidAt, new Date\(''2026-01-04T01:00:00Z''\)\)\)\.toBe\(false\);\n\}\);\n$'
+    match: contains
+  - type: regex
+    name: other-doc-untouched
+    target: { source: file, path: docs/domain/orders.md }
+    pattern: 'verified: 2026-01-15'
+    match: contains
+  - type: regex
+    name: coverage-regenerated
+    target: { source: file, path: docs/coverage.md }
+    pattern: 'R-REF-001 A refund expires after 72 hours'
+    match: contains
+  - type: tool_used
+    name: coverage-by-engine
+    tool: Bash
+    input_match: apply coverage
+    arm: with-only
+  - type: tool_used
+    name: no-commit
+    tool: Bash
+    input_match: git commit
+    min: 0
+    max: 0
+    arm: both
+  - type: tool_used
+    name: no-stage
+    tool: Bash
+    input_match: git add
+    min: 0
+    max: 0
+    arm: both

@@ -30,3 +30,31 @@ Status: Accepted · 2026-10-11
 **Consequences.**
 - Commands take longer to type.
 - In a Claude Code plugin, the plugin name adds a second prefix, like `/longevo:longevo-init`. We must solve this when we package the plugin.
+
+## D10. Give each skill its own copy of the shared scripts
+
+Status: Accepted · 2026-10-11
+
+**Context.** `init`, `sync`, `brief` and `review` share code to read git, files and frontmatter. `npx skills add -s` can install a single skill, and a skill cannot count on another skill's folder being next to it.
+
+**Options.** Import from `../longevo-init` · One source in the repo, copied into each skill · A separate npm package
+
+**Decision.** The shared code has one source in the repo, and a script copies it into each skill's `scripts/lib/`. A test fails if a copy differs from the source.
+
+**Consequences.**
+- Each skill works on its own, with no install step and no dependencies.
+- The same files appear in several skills. Contributors run the copy script after they change the source.
+
+## D13. Keep the plugin namespace and document both names
+
+Status: Accepted · 2026-10-11
+
+**Context.** D2 left one problem open: a Claude Code plugin adds its name to each skill, so the plugin install gives `/longevo:longevo-init`, while `npx skills` and `scripts/install.sh` give `/longevo-init`. Claude Code does not let a plugin drop the namespace.
+
+**Options.** Rename the skills to drop the prefix in the plugin · Ship only the `npx skills` install · Keep both and say which name each install gives
+
+**Decision.** Keep the `longevo-` prefix and the plugin. The README and the agents doc give the name for each install.
+
+**Consequences.**
+- Skills keep one name in every other agent, and names never clash with other skills.
+- Plugin users type the longer `/longevo:longevo-init`.

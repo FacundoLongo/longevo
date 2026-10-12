@@ -7,11 +7,13 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-111111?style=flat-square"></a>
-  <img alt="Status: preview 0.1" src="https://img.shields.io/badge/status-preview%200.1-111111?style=flat-square">
+  <img alt="Status: preview 0.2" src="https://img.shields.io/badge/status-preview%200.2-111111?style=flat-square">
   <a href="https://agentskills.io/specification"><img alt="Format: Agent Skills" src="https://img.shields.io/badge/format-Agent%20Skills-111111?style=flat-square"></a>
 </p>
 
 <p align="center">
+  <a href="docs/guides/getting-started.md">Getting started</a> ·
+  <a href="docs/guides/how-it-works.md">How it works</a> ·
   <a href="docs/design/overview.md">Overview</a> ·
   <a href="docs/design/commands.md">Commands</a> ·
   <a href="docs/roadmap.md">Roadmap</a> ·
@@ -22,7 +24,7 @@
 Longevo is a small set of agent skills. It helps coding agents write tests that catch real bugs, and it keeps your docs true to the code.
 
 > [!NOTE]
-> Longevo 0.1 is a preview: `longevo-testing` and a read-only `longevo-init`. The other commands are in the [roadmap](docs/roadmap.md).
+> Longevo 0.2 is a preview: all five skills work, and each one passed its eval gate. 1.0 comes after use on real repos and in all five agents. See the [roadmap](docs/roadmap.md).
 
 ## Why
 
@@ -36,45 +38,39 @@ Longevo does not replace your agent or your workflow. It improves what the agent
 
 ## Commands
 
-| Command | What it does | In 0.1 |
-| --- | --- | --- |
-| `/longevo-init` | The first time: reviews the repo and its AGENTS.md, and proposes changes. Every session after that: a short update. | Yes, read-only |
-| `longevo-testing` | Runs by itself when the agent writes tests. Based on [Primo's testing skill](https://github.com/primo-devs/public-skills). | Yes |
-| `/longevo-sync` | Compares docs with the code and with external sources, and proposes small fixes. | Step 3 |
-| `/longevo-brief` | Collects the rules, code, docs and tests for one task, as input for spec-driven development. | Step 4 |
-| `/longevo-review` | Reviews a diff against the repo rules and the testing guide. | Step 4 |
+| Command | What it does |
+| --- | --- |
+| `/longevo-init` | The first time: reviews the repo and its AGENTS.md, and applies the changes you pick so every agent sees the same rules. Every session after that: a short update. |
+| `longevo-testing` | Runs by itself when the agent writes tests: a test plan first, then tests that check results instead of mocks. Based on [Primo's testing skill](https://github.com/primo-devs/public-skills). |
+| `/longevo-sync` | Compares docs with the code and with external sources, and applies the small fixes you pick. |
+| `/longevo-brief` | Collects the rules, code, docs and tests for one task into a brief in `docs/work/`, as input for spec-driven development. |
+| `/longevo-review` | Reviews your changes against the rules, the testing guide, the docs and the brief, with a reviewer that did not write them. |
 
-Every command works the same way:
+The four commands:
 
-1. **Scan** the repo first.
-2. **Ask** only what the code cannot answer, one question at a time.
-3. **Propose** changes as diffs.
-4. **Wait** for your OK. Longevo never commits, and writes nothing without your OK except a session timestamp inside `.git`.
+- scan the repo first and ask only what the code cannot answer;
+- propose changes as diffs and write only the ones you pick;
+- never stage or commit, and keep Longevo's own state inside `.git`;
+- read Notion, Confluence, Jira or Linear through your agent's MCP servers, keep only the links in the repo and never write to those tools;
+- name secrets by file and line, never by value.
+
+See [how it works](docs/guides/how-it-works.md).
 
 ## Install
 
-One command for every agent (needs Node 18 or newer):
+One command for every agent (needs Node 18 or newer; stale-doc checks and `review` also need a git repo):
 
 ```bash
 npx skills add FacundoLongo/longevo -g
 ```
 
-It puts the skills in `~/.agents/skills`, which Codex, Cursor, Gemini CLI and Copilot read, and links them for Claude Code. Update with `npx skills update -g`.
+Then open your agent in a repo and run `/longevo-init`. In Codex it is `$longevo-init`, after the Claude Code plugin install it is `/longevo:longevo-init`, and in Gemini CLI you pick it from `/skills`.
 
-Native installers:
-
-| Agent | Command |
-| --- | --- |
-| Claude Code | `/plugin install longevo --marketplace FacundoLongo/longevo` |
-| Gemini CLI | `gemini extensions install https://github.com/FacundoLongo/longevo` (not tested yet) |
-| Copilot CLI | `copilot plugin marketplace add FacundoLongo/longevo`, then `copilot plugin install longevo@longevo` (not tested yet) |
-| Manual | `git clone https://github.com/FacundoLongo/longevo && longevo/scripts/install.sh` |
-
-Then open your agent in a repo and run `/longevo-init` (`$longevo-init` in Codex).
+The plugin installers for Claude Code, Gemini CLI and Copilot CLI, the first run and a working day are in [getting started](docs/guides/getting-started.md).
 
 ## Works with
 
-Longevo uses the [Agent Skills](https://agentskills.io/specification) format, so the same skills work in **Claude Code**, **Codex**, **Cursor**, **Gemini CLI** and **GitHub Copilot**. See [agents](docs/design/agents.md).
+Longevo uses the [Agent Skills](https://agentskills.io/specification) format, so the same skills work in **Claude Code**, **Codex**, **Cursor**, **Gemini CLI** and **GitHub Copilot CLI**. See [agents](docs/design/agents.md).
 
 ## Roadmap
 
@@ -85,7 +81,7 @@ Longevo uses the [Agent Skills](https://agentskills.io/specification) format, so
 | 3 | Living docs: `sync`, drift checks and external sources |
 | 4 | `brief` and `review` |
 
-Each step must work on two real repos before the next one starts. Details in the [roadmap](docs/roadmap.md).
+Details in the [roadmap](docs/roadmap.md).
 
 ## Contributing
 

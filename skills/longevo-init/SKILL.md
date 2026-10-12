@@ -1,51 +1,83 @@
 ---
 name: longevo-init
-description: "Review the repo or folder you are in: which agent instruction files exist, which agent loads each one, broken commands and paths, and how the tests look. Use at the start of a session, the first time you work in a repo, or when the user asks to review AGENTS.md, CLAUDE.md or the agent setup. Read-only: it reports and asks, and it never edits files."
+description: "Review the repo or folder you are in and set it up so every coding agent sees the same rules: which instruction files each agent loads, rules only some agents see, broken commands and paths, stale docs, tests, MCP servers and installed skills. It proposes a numbered list of changes with diffs, asks once which ones to apply and writes only those. Use at the start of a session, the first time in a repo, or when the user asks to review AGENTS.md, CLAUDE.md or the agent setup."
 ---
 
 # Longevo init
 
-Review the folder you are in and tell the user where it stands, what it has and what to change. In this version init is read-only: never edit, create or delete repo files, and never commit.
+Review the folder you are in, tell the user where it stands, and set it up so every agent sees the same rules. Write only the changes the user picks. Never stage or commit.
 
 ## 1. Scan
 
-Run the scan script from this skill's folder:
+Run the engine from this skill's folder:
 
 ```
-node <this skill's folder>/scripts/scan.mjs --cwd . --session
+node <this skill's folder>/scripts/longevo.mjs scan --cwd . --session
 ```
 
-It prints JSON and needs Node 18 or newer. If Node is missing, say so and stop. `--session` stores the time of this session inside the git folder, not in the repo files. Read only what the JSON points to; do not read the whole repo.
+It prints JSON and needs Node 18 or newer. If Node is missing, say so and stop. `--session` stores the time of this session inside `.git`; leave it out when the user asked for an audit (section 2), so an audit leaves nothing behind. Read only what the JSON points to; do not read the whole repo.
 
 ## 2. Pick the mode
 
-- **Session update:** `session.last` has a date and the user did not ask for a review. Go to section 5.
-- **Full review:** `session.last` is null, the user asks for a review or an audit, or the user passes `--full`. Go to sections 3 and 4.
+| Mode | When | Go to |
+| --- | --- | --- |
+| Audit | The user says not to change anything ("audit", "only report", "do not touch anything") or passes `--full` to this skill (it is not a `scan` option) | Sections 3 and 4. No list, no writes |
+| Setup | `block.exists` is false, `block` is not in `declined`, and it is not an audit | Sections 3 to 6 |
+| Session update | `block.exists` is true or `block` is in `declined`, and it is not an audit | Section 7 |
 
-## 3. Check what the script cannot
+"Review this repo and tell me what to fix" is a setup, not an audit: it ends with the numbered list and the question.
 
-Read only the files in `instructions.files`, and check the judgment items in [references/checklist.md](references/checklist.md). Open at most 3 files from `tests.antiGoldenCandidates` to confirm or drop each candidate.
+## 3. Check what the engine cannot
 
-## 4. Full report
+Read only the files in `instructions.files` and check the judgment items in [references/checklist.md](references/checklist.md). Open at most 3 files from `tests.antiGoldenCandidates` to confirm or drop each candidate. Read a file from `hotspots.files` only when you need it to answer a question.
 
-Follow [references/report.md](references/report.md). Every finding has evidence (`file:line`) and, when there is a fix, a proposed diff in a code block. Do not apply it.
+## 4. Report
 
-## 5. Session update
+Follow [references/report.md](references/report.md). Every finding has evidence (`file:line`). Say which home files you read (`home.read`), and show MCP servers by name only.
 
-At most 10 lines: the commits in `session.commits`, the current high-severity findings, and broken commands or paths. The scan does not remember earlier findings, so never call a finding new. If there are no commits and no high-severity findings, say so in one line.
+## 5. Ask, then propose
+
+First ask only what the code cannot answer and the list needs, one question at a time, with evidence and options. When the repo answers it (a lockfile, a config file, CI), do not ask: choose, give the evidence in the list item, and let the user leave that item out.
+
+Then show a numbered list of changes. Each item has the file, one line on why, the diff, and a key. Leave out any change whose key is in `declined`, and if any were left out, say so in one line: "N changes are hidden because you declined them. Say 'show declined' to see them again." When the user says that, run `apply undecline` with `{"all": true}` and scan again. Build the list with [references/apply.md](references/apply.md):
+
+- **Rule moves** for each `rules-not-shared` finding: rules that AGENTS.md does not already have.
+- **`@AGENTS.md`** in CLAUDE.md for `claude-sees-only-claude-md`, and for `only-claude-md` when the block creates AGENTS.md, so Claude Code reads it too.
+- **The Gemini setting** when `gemini` is in `agents.inUse` and AGENTS.md is not in `instructions.loads.gemini`.
+- **`docs/testing.md`** from [references/testing-template.md](references/testing-template.md) when it does not exist.
+- **Frontmatter** for at most 5 docs from `docs.candidates`, starting with the areas in `hotspots.areas`. Propose only `covers` you can justify from the doc and the code.
+- **The block** when it is missing or different from what it should say. Show its lines exactly as the engine writes them (see [references/apply.md](references/apply.md)). If `block.error` is set (two blocks, a marker without its pair, or an open code fence), report it and leave the block out of the list.
+- **`docs/coverage.md`** when `coverage.upToDate` is false.
+
+End with this question, and nothing after it:
+
+> Which ones do I apply? [All / Pick numbers / None]
+
+## 6. Apply
+
+Apply only the picked items, in the order in [references/apply.md](references/apply.md): prose changes with your edit tool, exactly as the diff you showed; structured changes with `longevo.mjs apply`. Record the items not picked with `apply decline`. If an apply command returns an error, show it and stop; do not retry with other input without asking.
+
+Then show `git status --short`, so new files show too, and `git diff --stat`. Never stage or commit.
+
+## 7. Session update
+
+At most 10 lines: the commits in `session.commits`, stale docs (`doc-stale`), the current high-severity findings, and broken commands or paths. When docs are stale, suggest `longevo-sync`. The scan does not remember earlier findings, so never call a finding new. If there are no commits and nothing to report, say so in one line.
+
+If `coverage.upToDate` is false, the block should change, or `claude-sees-only-claude-md` is in `findings` (propose `@AGENTS.md`), end with the numbered list and the same question as in section 5.
 
 ## Questions
 
-Ask only what the code cannot answer, one question at a time, with the evidence and with options when you can. For example:
+For example:
 
 - "CI runs `turbo run test`, but AGENTS.md does not say how to run a single test. What is the command?"
-- "CLAUDE.md and AGENTS.md have different rules, and each agent loads only one. Should the rules move to AGENTS.md, with `@AGENTS.md` in CLAUDE.md? [Yes / Report only]"
+- "CLAUDE.md says Jest and AGENTS.md says Vitest, and both are installed. Which one do new tests use? [Jest / Vitest]"
 
 Never ask what you can read in the repo. Never ask "should I continue?". No small talk.
 
 ## Rules
 
-- Read-only. If the user asks you to apply a change, show the diff and say that this version of Longevo does not write files yet.
+- Write only what the user picked from the list. Never stage or commit.
 - Never print a secret. Report `security` findings by file and line only.
-- Do not run install, migrate, build or deploy commands. Run only `--help`-style commands, and only with the user's OK.
+- MCP servers by name only. Never read or show their settings.
+- Do not run install, migrate, build or deploy commands. Run the repo's own tools only with `--help` or a dry run, and only with the user's OK. The engine and `git status` need no OK.
 - Keep it short. Prefer a table to paragraphs.

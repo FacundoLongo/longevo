@@ -4,7 +4,7 @@ Mechanics for Go repos with Postgres, testify and gomock. This file joins four f
 
 ## Guidelines from Primo
 
-What a good test looks like. The `testing` skill is the workflow for deciding *what* to test; this is the *how it should look* reference it points to.
+What a good test looks like. The `longevo-testing` skill is the workflow for deciding *what* to test; this is the *how it should look* reference it points to.
 
 These guidelines were written for a Go monolith backed by Postgres and served over HTTP. The principles transfer; the mechanics (testify, gomock, file layout) are Go-specific.
 

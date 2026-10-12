@@ -19,6 +19,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 - A doc checked twice on the same day gets the time in `verified` (`2026-10-11T18:35:12`), so the second check counts.
 - `longevo-brief` skill: reads the task from text, GitHub, Linear, Jira or Notion and saves a brief with the rules, affected code, golden tests, what must not change and WHEN/THEN acceptance criteria to `docs/work/`. It never writes to the tracker.
 - `longevo-review` skill: reviews the branch and the working tree against the rules, the testing guide, the docs and the brief with a fresh reviewer, and never changes code.
+- Guides: [getting started](docs/guides/getting-started.md) and [how it works](docs/guides/how-it-works.md).
 
 ### Changed
 

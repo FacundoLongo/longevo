@@ -6,6 +6,8 @@ This folder explains how Longevo works, what comes next and why we chose it. Eve
 
 | Doc | Read it to learn |
 | --- | --- |
+| [guides/getting-started.md](guides/getting-started.md) | How to install Longevo, set up a repo and use it every day |
+| [guides/how-it-works.md](guides/how-it-works.md) | What a run does, what Longevo keeps in your repo and what it never does |
 | [design/overview.md](design/overview.md) | What Longevo is, the problem, the principles and a working day |
 | [design/commands.md](design/commands.md) | The commands, how they ask and what they can write |
 | [design/docs-model.md](design/docs-model.md) | What Longevo keeps in a repo, external sources and large repos |
@@ -19,7 +21,7 @@ This folder explains how Longevo works, what comes next and why we chose it. Eve
 
 ## Rules for this folder
 
-- **Fixed places.** `design/` explains how Longevo works, `roadmap.md` says what comes next and `decisions/` records why. `guides/` (install and use) arrives with 1.0; until then, install steps live in the README. No other folders.
+- **Fixed places.** `guides/` shows people how to install and use Longevo, `design/` explains how it is built, `roadmap.md` says what comes next and `decisions/` records why. No other folders.
 - **Add a section before you add a file.** A new file needs a topic that does not fit in any doc above. Add it to the map in the same pull request.
 - **Keep it short.** Aim for less than 100 lines per doc. Over 150 lines, split it by topic.
 - **Start with the point.** The first sentence says what the doc is for.

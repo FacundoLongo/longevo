@@ -59,18 +59,9 @@ One command for every agent (needs Node 18 or newer):
 npx skills add FacundoLongo/longevo -g
 ```
 
-It puts the skills in `~/.agents/skills`, which Codex, Cursor, Gemini CLI and Copilot read, and links them for Claude Code. Update with `npx skills update -g`.
+Then open your agent in a repo and run `/longevo-init` (`$longevo-init` in Codex).
 
-Native installers:
-
-| Agent | Command |
-| --- | --- |
-| Claude Code | `/plugin install longevo --marketplace FacundoLongo/longevo` |
-| Gemini CLI | `gemini extensions install https://github.com/FacundoLongo/longevo` (not tested yet) |
-| Copilot CLI | `copilot plugin marketplace add FacundoLongo/longevo`, then `copilot plugin install longevo@longevo` (not tested yet) |
-| Manual | `git clone https://github.com/FacundoLongo/longevo && longevo/scripts/install.sh` |
-
-Then open your agent in a repo and run `/longevo-init`: `/longevo:longevo-init` after the Claude Code plugin install ([D13](docs/decisions/packaging.md)), `$longevo-init` in Codex, and `/skills` to pick it in Gemini CLI.
+The plugin installers for Claude Code, Gemini CLI and Copilot CLI, the first run and a working day are in [getting started](docs/guides/getting-started.md). To see what happens inside, read [how it works](docs/guides/how-it-works.md).
 
 ## Works with
 

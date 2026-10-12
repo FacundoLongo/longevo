@@ -11,6 +11,7 @@ Agent skills for better tests and docs that stay true to the code.
 - `evals/`: eval cases that run each skill with and without Longevo (`claude plugin eval`). Run them when you change a skill; see CONTRIBUTING.md.
 - `.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/` and `gemini-extension.json`: they package the same `skills/` folder for each agent.
 - `docs/README.md`: the map of all docs and the rules for adding one. Read it before you create or change a doc.
+- `docs/guides/`: how to install and use Longevo, for the people who use it. Update them when a skill's steps change.
 - `docs/design/`: how Longevo works. Read the matching file before you propose a change.
 - `docs/roadmap.md`: the four steps and the open decisions. Do not build anything that belongs to a later step.
 - `docs/decisions/`: decisions grouped by area, with an index in its README. Add a new decision to its area file. Never edit an accepted decision; add a new one that supersedes it.

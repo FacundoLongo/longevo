@@ -39,9 +39,19 @@ graders:
     pattern: 'verified: 2026-01-15'
     match: not_contains
   - type: regex
+    name: verified-date-present
+    target: { source: file, path: docs/domain/refunds.md }
+    pattern: '\nverified: \d{4}-\d{2}-\d{2}'
+    match: contains
+  - type: regex
     name: code-untouched
     target: { source: file, path: src/refunds/policy.ts }
-    pattern: 'REFUND_HOURS = 72'
+    pattern: '^export const REFUND_HOURS = 72;\n\nexport function canRefund\(paidAt: Date, now: Date\): boolean \{\n  return now\.getTime\(\) - paidAt\.getTime\(\) <= REFUND_HOURS \* 60 \* 60 \* 1000;\n\}\n$'
+    match: contains
+  - type: regex
+    name: test-untouched
+    target: { source: file, path: src/refunds/policy.test.ts }
+    pattern: '^import \{ expect, test \} from ''vitest'';\nimport \{ canRefund \} from ''\.\/policy'';\n\ntest\(''rejects a refund after 72 hours'', \(\) => \{\n  const paidAt = new Date\(''2026-01-01T00:00:00Z''\);\n  expect\(canRefund\(paidAt, new Date\(''2026-01-04T01:00:00Z''\)\)\)\.toBe\(false\);\n\}\);\n$'
     match: contains
   - type: regex
     name: other-doc-untouched
@@ -53,6 +63,11 @@ graders:
     target: { source: file, path: docs/coverage.md }
     pattern: 'R-REF-001 A refund expires after 72 hours'
     match: contains
+  - type: tool_used
+    name: coverage-by-engine
+    tool: Bash
+    input_match: apply coverage
+    arm: with-only
   - type: tool_used
     name: no-commit
     tool: Bash

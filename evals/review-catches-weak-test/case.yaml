@@ -28,6 +28,16 @@ graders:
     min: 0
     max: 0
     arm: both
+  - type: regex
+    name: code-untouched
+    target: { source: file, path: src/refunds/policy.ts }
+    pattern: '^export const REFUND_HOURS = 24;\n\nexport function canRefund\(paidAt: Date, now: Date\): boolean \{\n  return now\.getTime\(\) - paidAt\.getTime\(\) <= REFUND_HOURS \* 60 \* 60 \* 1000;\n\}\n$'
+    match: contains
+  - type: regex
+    name: test-untouched
+    target: { source: file, path: src/refunds/policy.test.ts }
+    pattern: '^import \{ expect, test, vi \} from ''vitest'';\nimport \* as store from ''\.\/store'';\nimport \{ canRefund \} from ''\.\/policy'';\n\nvi\.mock\(''\.\/store''\);\n\ntest\(''canRefund works'', \(\) => \{\n  const save = vi\.fn\(\);\n  vi\.mocked\(store\.createTestStore\)\.mockReturnValue\(\{ save, all: vi\.fn\(\) \}\);\n  canRefund\(new Date\(\), new Date\(\)\);\n  expect\(store\.createTestStore\)\.toHaveBeenCalledTimes\(0\);\n  expect\(save\)\.not\.toHaveBeenCalled\(\);\n  expect\(vi\.mocked\(store\.createTestStore\)\)\.not\.toHaveBeenCalledWith\(1\);\n\}\);\n$'
+    match: contains
   - type: llm
     name: finds-the-problems
     focus: last_message

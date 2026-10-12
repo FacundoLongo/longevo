@@ -17,15 +17,20 @@ graders:
     input_match: longevo-sync
     arm: with-only
   - type: regex
-    name: rule-text-kept
+    name: only-the-date-changed
     target: { source: file, path: docs/domain/refunds.md }
-    pattern: 'A refund expires after 48 hours'
+    pattern: '^---\ncovers: \["src\/refunds\/\*\*"\]\nverified: \d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?\n---\n\n# Refunds rules\n\n### R-REF-001 · A refund expires after 48 hours\nSource: Support handbook\nCode: src\/refunds\/policy\.ts:1-5\nTest: "rejects a refund after 48 hours"\nStatus: implemented and tested\n\n- WHEN a customer asks for a refund 49 hours after the payment\n- THEN the refund is rejected\n$'
     match: contains
   - type: regex
     name: verified-date-moved
     target: { source: file, path: docs/domain/refunds.md }
     pattern: 'verified: 2026-01-15'
     match: not_contains
+  - type: regex
+    name: code-untouched
+    target: { source: file, path: src/refunds/policy.ts }
+    pattern: '^export const REFUND_HOURS = 48;\n\nexport function canRefund\(paidAt: Date, now: Date\): boolean \{\n  return now\.valueOf\(\) - paidAt\.valueOf\(\) <= REFUND_HOURS \* 60 \* 60 \* 1000;\n\}\n$'
+    match: contains
   - type: llm
     name: says-still-true
     focus: last_message

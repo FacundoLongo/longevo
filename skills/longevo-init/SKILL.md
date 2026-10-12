@@ -21,7 +21,7 @@ It prints JSON and needs Node 18 or newer. If Node is missing, say so and stop. 
 
 | Mode | When | Go to |
 | --- | --- | --- |
-| Audit | The user says not to change anything ("audit", "only report", "do not touch anything") or passes `--full` | Sections 3 and 4. No list, no writes |
+| Audit | The user says not to change anything ("audit", "only report", "do not touch anything") or passes `--full` to this skill (it is not a `scan` option) | Sections 3 and 4. No list, no writes |
 | Setup | `block.exists` is false, `block` is not in `declined`, and it is not an audit | Sections 3 to 6 |
 | Session update | `block.exists` is true or `block` is in `declined`, and it is not an audit | Section 7 |
 
@@ -46,7 +46,7 @@ Then show a numbered list of changes. Each item has the file, one line on why, t
 - **The Gemini setting** when `gemini` is in `agents.inUse` and AGENTS.md is not in `instructions.loads.gemini`.
 - **`docs/testing.md`** from [references/testing-template.md](references/testing-template.md) when it does not exist.
 - **Frontmatter** for at most 5 docs from `docs.candidates`, starting with the areas in `hotspots.areas`. Propose only `covers` you can justify from the doc and the code.
-- **The block** when it is missing or different from what it should say. Show its lines exactly as the engine writes them (see [references/apply.md](references/apply.md)).
+- **The block** when it is missing or different from what it should say. Show its lines exactly as the engine writes them (see [references/apply.md](references/apply.md)). If `block.error` is set (two blocks, a marker without its pair, or an open code fence), report it and leave the block out of the list.
 - **`docs/coverage.md`** when `coverage.upToDate` is false.
 
 End with this question, and nothing after it:
@@ -57,7 +57,7 @@ End with this question, and nothing after it:
 
 Apply only the picked items, in the order in [references/apply.md](references/apply.md): prose changes with your edit tool, exactly as the diff you showed; structured changes with `longevo.mjs apply`. Record the items not picked with `apply decline`. If an apply command returns an error, show it and stop; do not retry with other input without asking.
 
-Then show `git diff --stat`. Never stage or commit.
+Then show `git status --short`, so new files show too, and `git diff --stat`. Never stage or commit.
 
 ## 7. Session update
 

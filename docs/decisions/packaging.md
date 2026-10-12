@@ -44,3 +44,17 @@ Status: Accepted · 2026-10-11
 **Consequences.**
 - Each skill works on its own, with no install step and no dependencies.
 - The same files appear in several skills. Contributors run the copy script after they change the source.
+
+## D13. Keep the plugin namespace and document both names
+
+Status: Accepted · 2026-10-11
+
+**Context.** D2 left one problem open: a Claude Code plugin adds its name to each skill, so the plugin install gives `/longevo:longevo-init`, while `npx skills` and `scripts/install.sh` give `/longevo-init`. Claude Code does not let a plugin drop the namespace.
+
+**Options.** Rename the skills to drop the prefix in the plugin · Ship only the `npx skills` install · Keep both and say which name each install gives
+
+**Decision.** Keep the `longevo-` prefix and the plugin. The README and the agents doc give the name for each install.
+
+**Consequences.**
+- Skills keep one name in every other agent, and names never clash with other skills.
+- Plugin users type the longer `/longevo:longevo-init`.

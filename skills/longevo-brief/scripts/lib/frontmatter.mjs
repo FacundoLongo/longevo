@@ -59,14 +59,17 @@ function blockText({ style, lines }) {
 }
 
 function parseBlock(lines) {
+  // Errors name the line by its number in the file, never by its text: it could hold a secret.
+  const unreadable = (index) => new Error(`Cannot read line ${index + 2} of the frontmatter.`);
   const data = {};
   let key = null;
   let item = null;
   let itemIndent = 0;
+  let itemFields = 0;
   let map = null;
   let mapIndent = 0;
   let text = null;
-  for (const raw of lines) {
+  for (const [index, raw] of lines.entries()) {
     const line = raw.trim();
     const indent = raw.length - raw.trimStart().length;
     if (text) {
@@ -80,7 +83,7 @@ function parseBlock(lines) {
     if (!line || line.startsWith('#')) continue;
     const pair = line.match(KEY_VALUE);
     if (indent === 0 && !line.startsWith('- ')) {
-      if (!pair) throw new Error(`Cannot read the frontmatter line "${line}".`);
+      if (!pair) throw unreadable(index);
       [, key] = pair;
       item = null;
       map = null;
@@ -92,6 +95,9 @@ function parseBlock(lines) {
       continue;
     } else if (map && indent === mapIndent && pair && !line.startsWith('- ')) {
       map[pair[1]] = value(pair[2]);
+    } else if (item && indent > itemFields) {
+      // Deeper lines of an item are another tool's nested map or list: kept in the file, not read.
+      continue;
     } else if (key !== null && !map && (line.startsWith('- ') || line === '-')) {
       const rest = line.slice(1).trim();
       const inner = rest.match(KEY_VALUE);
@@ -99,6 +105,8 @@ function parseBlock(lines) {
       if (inner && !/^["']/.test(rest)) {
         item = { [inner[1]]: scalar(inner[2]) };
         itemIndent = indent;
+        // Fields of the item sit at the column of its first key.
+        itemFields = indent + 1 + raw.trimStart().match(/^-(\s*)/)[1].length;
         data[key].push(item);
       } else {
         item = null;
@@ -111,7 +119,7 @@ function parseBlock(lines) {
       mapIndent = indent;
       data[key] = map;
     } else {
-      throw new Error(`Cannot read the frontmatter line "${line}".`);
+      throw unreadable(index);
     }
   }
   if (text) data[key] = blockText(text);
@@ -123,6 +131,8 @@ function closingLine(lines) {
 }
 
 export function parseFrontmatter(text) {
+  // A byte order mark before the first --- is not part of it.
+  if (text.startsWith('\uFEFF')) return parseFrontmatter(text.slice(1));
   const lines = text.split('\n');
   if (clean(lines[0]) === '+++') return { data: {}, body: text, hasFrontmatter: true, error: TOML };
   if (clean(lines[0]) !== '---') return { data: {}, body: text, hasFrontmatter: false, error: null };
@@ -153,6 +163,7 @@ function renderEntry(key, v, eol) {
 
 // Sets top-level keys. Lines of other keys and the body are kept byte for byte.
 export function setFrontmatter(text, updates) {
+  if (text.startsWith('\uFEFF')) return `\uFEFF${setFrontmatter(text.slice(1), updates)}`;
   const parsed = parseFrontmatter(text);
   if (parsed.error) throw new Error(parsed.error);
   const lines = text.split('\n');
@@ -192,6 +203,7 @@ function keyEnd(lines, start, limit = lines.length) {
 // Sets the checked date of one source and leaves every other line of the list as it is, comments included.
 // A source written as a bare URL becomes a map with its url and checked date. An inline list is rewritten.
 export function setSourceChecked(text, url, date) {
+  if (text.startsWith('\uFEFF')) return `\uFEFF${setSourceChecked(text.slice(1), url, date)}`;
   const parsed = parseFrontmatter(text);
   if (parsed.error) throw new Error(parsed.error);
   const lines = text.split('\n');
@@ -201,7 +213,10 @@ export function setSourceChecked(text, url, date) {
   if (start === -1 || !/^sources:\s*(#.*)?$/.test(clean(lines[start]))) {
     const list = (Array.isArray(parsed.data.sources) ? parsed.data.sources : []).map((s) => (typeof s === 'string' ? { url: s } : s));
     if (!list.some((s) => s.url === url)) throw new Error(`The sources list does not cite ${url}.`);
-    return setFrontmatter(text, { sources: list.map((s) => (s.url === url ? { ...s, checked: date } : s)) });
+    const written = setFrontmatter(text, { sources: list.map((s) => (s.url === url ? { ...s, checked: date } : s)) });
+    // A comment after an inline list moves to the sources line.
+    const comment = start === -1 ? null : clean(lines[start]).match(/\]\s*(#.*)$/)?.[1];
+    return comment ? written.replace(/^sources:(\r?)$/m, `sources: ${comment}$1`) : written;
   }
   const stop = keyEnd(lines, start, end);
   const items = [];
@@ -222,8 +237,9 @@ export function setSourceChecked(text, url, date) {
     if (itemUrl !== url) continue;
     const pad = ' '.repeat(item.fields);
     if (!isMap(item.rest)) {
-      const comment = /^["']/.test(item.rest) ? '' : item.rest.match(/\s+#.*$/)?.[0] ?? '';
-      lines.splice(item.line, 1, `${' '.repeat(item.indent)}- url: ${renderScalar(url)}${comment}${eol}`, `${pad}checked: ${date}${eol}`);
+      const comment = (/^["']/.test(item.rest) ? item.rest.match(/^(["'])(?:(?!\1).)*\1(\s+#.*)$/)?.[2] : item.rest.match(/\s+#.*$/)?.[0]) ?? '';
+      const dash = `${' '.repeat(item.indent)}-${' '.repeat(item.fields - item.indent - 1)}`;
+      lines.splice(item.line, 1, `${dash}url: ${renderScalar(url)}${comment}${eol}`, `${pad}checked: ${date}${eol}`);
       return lines.join('\n');
     }
     if (first[1] === 'checked') {

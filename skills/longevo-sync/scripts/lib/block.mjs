@@ -27,11 +27,13 @@ function markerLines(text) {
   const kept = lines.map((line, index) => (kinds[index] ? null : line.trim()));
   const starts = kept.flatMap((line, index) => (line === START ? [index] : []));
   const ends = kept.flatMap((line, index) => (line === END ? [index] : []));
-  return { lines, starts, ends };
+  return { lines, starts, ends, unclosed: kinds.unclosed };
 }
 
 function findBlock(text) {
-  const { lines, starts, ends } = markerLines(text);
+  const { lines, starts, ends, unclosed } = markerLines(text);
+  // A block written after an open fence would land inside it.
+  if (unclosed) throw new Error('AGENTS.md ends inside a code fence. Close the fence by hand and run init again.');
   if (starts.length === 0 && ends.length === 0) return { lines, start: -1, end: -1 };
   if (starts.length > 1 || ends.length > 1) throw new Error('AGENTS.md has more than one Longevo block. Keep one and run init again.');
   if (starts.length !== ends.length || ends[0] < starts[0]) throw new Error('AGENTS.md has a Longevo marker without its pair. Fix the markers by hand and run init again.');

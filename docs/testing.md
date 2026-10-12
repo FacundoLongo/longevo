@@ -19,7 +19,7 @@ How tests work in this repo. `longevo-testing` follows this file over its own gu
 
 | Layer | Folder | Test type | Storage |
 | --- | --- | --- | --- |
-| Engine: scan, apply, coverage | `src/` | Integration: a real git repo in a temp folder, then the real function or the CLI | Real files and real git |
+| Engine: every command | `src/` | Integration: a real git repo in a temp folder, then the real function or the CLI | Real files and real git |
 | Skills | `skills/` | Content checks in `tests/skills.test.mjs`; behavior in `evals/` | None |
 | Packaging and repo tools | manifests, `scripts/` | Integration: run the script on temp folders | Real files |
 

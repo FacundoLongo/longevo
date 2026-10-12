@@ -5,7 +5,7 @@ verified: 2026-10-11T16:46:03
 
 # Commands
 
-The four commands, the testing skill, how they ask and what they can write.
+The five skills (four commands and the testing skill), how they ask and what they can write.
 
 | Command | When | What it does | Step |
 | --- | --- | --- | --- |
@@ -20,7 +20,7 @@ The four commands, the testing skill, how they ask and what they can write.
 1. **Scan.** A script collects the cheap facts. The model reads only what it needs.
 2. **Ask.** Only what the code cannot answer, one question at a time, with evidence and options.
 3. **Propose.** A short report, then a numbered list of changes, each with its diff.
-4. **You pick.** One question: "Which ones do I apply? [All / Pick numbers / None]". Longevo applies only those, shows `git diff --stat` and stops. It never stages or commits ([D7](../decisions/commands.md)).
+4. **You pick.** One question: "Which ones do I apply? [All / Pick numbers / None]". Longevo applies only those, shows `git status --short` and `git diff --stat`, and stops. It never stages or commits ([D7](../decisions/commands.md)).
 
 Example questions:
 
@@ -36,9 +36,9 @@ It never asks what it can read from the repo, never asks "should I continue?" an
 | --- | --- | --- |
 | First time | No Longevo block in AGENTS.md | A full review report and a numbered list of changes |
 | New session | There is a Longevo block | 10 lines or less: commits since the last session, stale docs, high-severity findings, broken commands and paths. A list of changes only if there is one, like an out-of-date `docs/coverage.md` |
-| Audit | You say not to change anything, or pass `--full` | The full report, with no list and no writes |
+| Audit | You say not to change anything, or pass `--full` to the skill | The full report, with no list and no writes |
 
-The date of the last session is stored inside `.git`. In Claude Code, Cursor and Copilot CLI, `init` can run by itself at session start with a hook that only reports. In Codex and Gemini CLI you run it yourself.
+The date of the last session is stored inside `.git`. You start each session with `init`; a session-start hook that only reports is planned for Claude Code, Cursor and Copilot CLI (see the [roadmap](../roadmap.md)).
 
 ## What `init` can write
 
@@ -51,7 +51,7 @@ Only the changes you pick from the list:
 - `docs/testing.md` and `docs/coverage.md`,
 - prose diffs it showed you, like moving a rule from CLAUDE.md or `.cursor/rules` to AGENTS.md.
 
-The engine (`longevo.mjs apply`) writes the block, the `@AGENTS.md` line, the Gemini setting, the frontmatter and `docs/coverage.md`, so the same input gives the same file in every agent. The model writes `docs/testing.md` from a template and applies the prose diffs exactly as it showed them. Longevo changes text outside its block only through a diff you picked. `docs/sources.md` arrives with `sync` in step 3.
+The engine (`longevo.mjs apply`) writes the block, the `@AGENTS.md` line, the Gemini setting, the frontmatter and `docs/coverage.md`, so the same input gives the same file in every agent. The model writes `docs/testing.md` from a template and applies the prose diffs exactly as it showed them. Longevo changes text outside its block only through a diff you picked. `sync` also writes `docs/sources.md`.
 
 ### The Longevo block
 
@@ -74,7 +74,7 @@ The engine (`longevo.mjs apply`) writes the block, the `@AGENTS.md` line, the Ge
 
 ## `sync`: docs that follow the code
 
-A script lists living docs whose `covers` changed after the anchor, `covers` that match nothing, broken paths, rules whose code or test is gone, sources not checked in 30 days and briefs marked done. For each stale doc the model reads the code diff and the doc. If the doc is still true, it proposes only a new `verified` date. If not, it proposes a small diff, or asks which one is right when the doc and the code disagree. It reads external sources only through MCP servers the agent has, and says which ones it could not check.
+A script lists living docs whose `covers` changed after the anchor (every commit counts, big ones too, see [D12](../decisions/docs.md)), `covers` that match nothing, broken paths, rules whose code or test is gone, sources not checked in 30 days and briefs marked done. For each stale doc the model reads the code diff and the doc. If the doc is still true, it proposes only a new `verified` date. If not, it proposes a small diff, or asks which one is right when the doc and the code disagree. It reads external sources only through MCP servers the agent has, and says which ones it could not check.
 
 `sync` can write, from the list: `verified` dates, `checked` dates of sources, diffs to docs and rules, rules taken from finished briefs, `docs/sources.md` and `docs/coverage.md`. A script generates the last two.
 
@@ -83,7 +83,7 @@ A script lists living docs whose `covers` changed after the anchor, `covers` tha
 `/longevo-brief` prepares what your spec tool needs. It does not replace it. It reads the task from your text, a GitHub issue (`gh issue view`), or a Linear, Jira or Notion link through MCP. Without MCP, it asks you to paste the task. After you say yes, the brief goes to `docs/work/<date>-<slug>/brief.md`, with `status`, `task` and `covers` in its frontmatter, and has these parts:
 
 - **Goal**, from the issue.
-- **Rules that apply**, each with its status (implemented, missing, contradicts).
+- **Rules that apply**, each with its status (one of the five in the rules format).
 - **Affected code and docs.**
 - **Golden tests** to copy.
 - **What must not change.** Each item asks for a regression test.

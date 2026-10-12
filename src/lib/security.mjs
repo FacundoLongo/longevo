@@ -20,14 +20,21 @@ const SECRETS = [
   // NAME=value as in .env, properties files and shell. Code has spaces around =, or a value that is a reference or a path.
   ['secret variable', new RegExp(`\\b${NAME}=(?![$({[./~])[^\\s"'\`]{8,200}`, 'i')],
   // name: value at the end of a YAML line, with no call or punctuation that code would have.
-  ['secret in yaml', new RegExp(`(?<=^|[\\s"'{,])${NAME}\\s*:\\s*(?![$({[<"'])[A-Za-z0-9_\\-+/=!@%^&*]{8,200}\\s*$`, 'im')],
+  // A + or - before the name is a diff line.
+  ['secret in yaml', new RegExp(`(?<=^|[\\s"'{,+-])${NAME}\\s*:\\s*(?![$({[<"'])[A-Za-z0-9_\\-+/=!@%^&*]{8,200}\\s*$`, 'im')],
 ];
 const PERSONAL_PATH = /(?:\/Users\/|\/home\/|C:\\Users\\)[\w.-]+/;
 const INSTALL_FROM_WEB = /(?:curl|wget)\s+[^|]*\|\s*(?:ba)?sh|npm\s+i(?:nstall)?\s+-g\s/i;
 
+// A private key from its first line to its last; without the last line, to the end of the text.
+const PRIVATE_KEY_BLOCK = /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g;
+const KEY_BEGIN = /-----BEGIN [A-Z ]*PRIVATE KEY-----/;
+const KEY_END = /-----END [A-Z ]*PRIVATE KEY-----/;
+
 // Replaces anything that looks like a secret, for text the report has to show.
 export function redact(text) {
-  return SECRETS.reduce((out, [, pattern]) => out.replace(new RegExp(pattern.source, `${pattern.flags.replace('g', '')}g`), '[redacted]'), text);
+  const keys = text.replace(PRIVATE_KEY_BLOCK, '[redacted]');
+  return SECRETS.reduce((out, [, pattern]) => out.replace(new RegExp(pattern.source, `${pattern.flags.replace('g', '')}g`), '[redacted]'), keys);
 }
 
 // Runs every string in a report through redact, so no field can carry a secret.
@@ -38,15 +45,28 @@ export function redactDeep(value) {
   return value;
 }
 
-// Reports where a risk is, never the matched text.
-export function securityFindings(file, text) {
+// Reports where a risk is, never the matched text. Entries are the lines to check, in order, with their numbers;
+// every line of a private key is reported, not only its first.
+export function lineFindings(file, entries) {
   const findings = [];
-  text.split('\n').forEach((line, index) => {
+  let inKey = false;
+  for (const { line, text } of entries) {
+    if (inKey || KEY_BEGIN.test(text)) {
+      findings.push({ file, line, kind: 'private key' });
+      inKey = !KEY_END.test(text);
+      continue;
+    }
     // One secret finding per line: the first, most specific kind that matches.
-    const secret = SECRETS.find(([, pattern]) => pattern.test(line));
-    if (secret) findings.push({ file, line: index + 1, kind: secret[0] });
-    if (PERSONAL_PATH.test(line)) findings.push({ file, line: index + 1, kind: 'personal path' });
-    if (INSTALL_FROM_WEB.test(line)) findings.push({ file, line: index + 1, kind: 'install from the internet' });
-  });
+    const secret = SECRETS.find(([, pattern]) => pattern.test(text));
+    if (secret) findings.push({ file, line, kind: secret[0] });
+    if (PERSONAL_PATH.test(text)) findings.push({ file, line, kind: 'personal path' });
+    if (INSTALL_FROM_WEB.test(text)) findings.push({ file, line, kind: 'install from the internet' });
+  }
   return findings;
 }
+
+export function securityFindings(file, text) {
+  return lineFindings(file, text.split('\n').map((line, index) => ({ line: index + 1, text: line })));
+}
+
+export const isSecretKind = (kind) => kind !== 'personal path' && kind !== 'install from the internet';

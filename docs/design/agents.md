@@ -9,9 +9,9 @@ How each agent loads Longevo. The skills use the Agent Skills format, so the sam
 
 | Agent | Skills folders (home · repo) | How you run a skill | Instruction files it reads |
 | --- | --- | --- | --- |
-| Claude Code | `~/.claude/skills` · `.claude/skills` | `/longevo-init` | CLAUDE.md. AGENTS.md only when there is no CLAUDE.md; otherwise CLAUDE.md needs `@AGENTS.md`, or the two must be one file (either one a link to the other) |
+| Claude Code | `~/.claude/skills` · `.claude/skills` | `/longevo-init`, or `/longevo:longevo-init` from the plugin ([D13](../decisions/packaging.md)) | CLAUDE.md. AGENTS.md only when there is no CLAUDE.md; otherwise CLAUDE.md needs `@AGENTS.md`, or the two must be one file (either one a link to the other) |
 | Codex | `~/.agents/skills` · `.agents/skills` | `$longevo-init` | AGENTS.md, up to 32 KiB in total |
-| Cursor | `~/.cursor/skills`, `~/.agents/skills`, `~/.claude/skills` · the same in the repo | `/longevo-init` | AGENTS.md and `.cursor/rules/*.mdc` |
+| Cursor | `~/.cursor/skills`, `~/.agents/skills`, `~/.claude/skills`, `~/.codex/skills` · the same in the repo | `/longevo-init` | AGENTS.md and `.cursor/rules/*.mdc` |
 | Gemini CLI | `~/.gemini/skills`, `~/.agents/skills` · the same in the repo | `/skills` | GEMINI.md. AGENTS.md only if `context.fileName` in `.gemini/settings.json` lists it |
 | Copilot CLI | `~/.copilot/skills`, `~/.agents/skills` · `.github/skills`, `.agents/skills`, `.claude/skills` | `/longevo-init` | Copilot instructions, AGENTS.md, CLAUDE.md and GEMINI.md |
 

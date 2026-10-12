@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // The Longevo engine. Each command skill carries a copy of this folder (see scripts/copy-engine.mjs).
 import { readFileSync, realpathSync } from 'node:fs';
-import { apply } from './lib/apply.mjs';
+import { apply, APPLY_OPS } from './lib/apply.mjs';
 import { fileURLToPath } from 'node:url';
 import { generatedFiles } from './lib/attributes.mjs';
 import { coverageFor } from './lib/coverage.mjs';
 import { listFiles, scope } from './lib/repo.mjs';
+import { redact } from './lib/security.mjs';
 import { scan, VERSION } from './scan.mjs';
 import { syncReport } from './sync.mjs';
 import { contextReport } from './context.mjs';
@@ -34,14 +35,13 @@ const NO_INPUT = new Set(['gemini', 'sources', 'coverage']);
 // For these, no input is a normal call.
 const OPTIONAL_INPUT = new Set(['import']);
 
-function readStdin(op) {
+function readStdin() {
   try {
     return readFileSync(0, 'utf8');
   } catch (error) {
     // A non-blocking pipe with nothing written yet: no input was given.
-    if (error.code !== 'EAGAIN') throw error;
-    if (OPTIONAL_INPUT.has(op)) return '';
-    throw new Error(`apply ${op} needs its input as JSON on stdin. Pass it with a heredoc.`);
+    if (error.code === 'EAGAIN') return '';
+    throw error;
   }
 }
 
@@ -55,7 +55,12 @@ export function run(argv) {
     return contextReport(args.cwd, { paths: args.paths.split(',').map((p) => p.trim()).filter(Boolean) });
   }
   if (args.command === 'apply') {
-    const raw = args.input ? readFileSync(args.input, 'utf8') : process.stdin.isTTY || NO_INPUT.has(args.rest[0]) ? '' : readStdin(args.rest[0]);
+    const raw = args.input ? readFileSync(args.input, 'utf8') : process.stdin.isTTY || NO_INPUT.has(args.rest[0]) ? '' : readStdin();
+    // No input at all is a mistake for ops that take one: an empty block would replace the user's block.
+    const op = args.rest[0];
+    if (!raw.trim() && APPLY_OPS.includes(op) && !NO_INPUT.has(op) && !OPTIONAL_INPUT.has(op)) {
+      throw new Error(`apply ${op} needs its input as JSON on stdin. Pass it with a heredoc, or with --input <file>.`);
+    }
     let input = {};
     if (raw.trim()) {
       try {
@@ -80,7 +85,7 @@ if (isMain) {
     const out = run(process.argv.slice(2));
     console.log(typeof out === 'string' ? out : JSON.stringify(out, null, 2));
   } catch (error) {
-    console.log(JSON.stringify({ version: VERSION, error: error.message }));
+    console.log(JSON.stringify({ version: VERSION, error: redact(error.message) }));
     process.exit(1);
   }
 }

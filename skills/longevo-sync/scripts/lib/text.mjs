@@ -1,4 +1,4 @@
-import { readFileSync, statSync } from 'node:fs';
+import { lstatSync, readFileSync, statSync } from 'node:fs';
 
 // UTF-16 with a byte order mark is decoded; files over the limit or with NUL bytes are not text to Longevo.
 function decode(buffer) {
@@ -23,16 +23,22 @@ export function unreadableReason(path, maxBytes = 1_000_000) {
     if (statSync(path).size > maxBytes) return 'it is larger than 1 MB';
     return decode(readFileSync(path)) === null ? 'it has NUL bytes, so it may be UTF-16 without a byte order mark or a binary file' : null;
   } catch (error) {
+    try {
+      if (lstatSync(path).isSymbolicLink()) return 'it is a link to a file that does not exist';
+    } catch {
+      // Not there at all.
+    }
     return `it cannot be opened (${error.code ?? 'error'})`;
   }
 }
 
 // For each line: 'fence' for a line that opens or closes a code fence, 'code' inside one, or null. As in
 // CommonMark, a fence closes only on the same character, at least as long, with nothing after it.
+// The list also says whether the text ends inside an open fence (`unclosed`).
 export function fenceKinds(lines) {
   let open = null;
-  return lines.map((line) => {
-    const fence = line.match(/^\s*(`{3,}|~{3,})(.*)$/);
+  const kinds = lines.map((line) => {
+    const fence = line.replace(/\r$/, '').match(/^\s*(`{3,}|~{3,})(.*)$/);
     if (open) {
       if (fence && fence[1][0] === open[0] && fence[1].length >= open.length && !fence[2].trim()) {
         open = null;
@@ -46,6 +52,8 @@ export function fenceKinds(lines) {
     }
     return null;
   });
+  kinds.unclosed = open !== null;
+  return kinds;
 }
 
 // Inline code spans and the lines of fenced code blocks, with their line numbers.

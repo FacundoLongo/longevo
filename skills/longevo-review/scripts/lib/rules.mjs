@@ -21,14 +21,17 @@ function parseCode(value) {
 }
 
 // The test name: the first quoted or backticked part, so a line like `name` in tests/x.test.ts still works.
-// A double-quoted name wins; a backticked or single-quoted name counts only at the start, so apostrophes in an
-// unquoted name stay part of it.
+// The test name: a double-quoted part, then a backticked part that is not a file path, then a single-quoted part
+// that no letter touches (so the apostrophes in "doesn't" stay in the name), then the whole line.
+const PATH_LIKE = /^[\w.@-]*\/[\w./@-]*\.\w+$|^[\w-]+(?:\.[\w-]+)*\.[a-z]{1,5}$/;
 function parseTest(value) {
   const double = value.match(/"([^"]+)"/);
   if (double) return double[1].trim();
-  const lead = value.match(/^`([^`]+)`|^'([^']+)'(?=\s|$)/);
-  if (lead) return (lead[1] ?? lead[2]).trim();
-  return value.trim();
+  const backticked = [...value.matchAll(/`([^`]+)`/g)].map((m) => m[1].trim()).find((span) => !PATH_LIKE.test(span));
+  if (backticked) return backticked;
+  const single = value.match(/(?:^|[^\w])'([^']+)'(?=[^\w]|$)/);
+  if (single) return single[1].trim();
+  return value.trim().replace(/^["'`]|["'`]$/g, '');
 }
 
 export function parseRules(doc, text) {

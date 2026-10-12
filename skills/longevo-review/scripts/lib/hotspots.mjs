@@ -8,14 +8,16 @@ export const MAX_COMMIT_FILES = 100;
 export function commitsSince(sc, { range, since } = {}) {
   if (!sc.isGit) return [];
   // Without rename detection a moved file shows under its old path too, so moving code out of covers counts.
-  const args = ['-c', 'core.quotePath=false', 'log', '--no-merges', '--no-renames', '--format=%x00%H', '--name-only'];
+  const args = ['-c', 'core.quotePath=false', 'log', '--no-merges', '--no-renames', '--format=%x00%H%x09%at%x09%ct', '--name-only'];
   if (since) args.push(`--since=${since}`);
   if (range) args.push(range);
   const out = git(sc.root, args);
   if (!out) return [];
   return out.split('\0').filter((chunk) => chunk.trim()).map((chunk) => {
-    const [hash, ...files] = chunk.split('\n');
-    return { hash: hash.trim(), files: files.map((file) => file.trim()).filter(Boolean) };
+    const [head, ...files] = chunk.split('\n');
+    const [hash, authored, committed] = head.trim().split('\t');
+    // The later of the two dates: a commit written before a check but rebased after it still counts.
+    return { hash, time: Math.max(Number(authored) || 0, Number(committed) || 0), files: files.map((file) => file.trim()).filter(Boolean) };
   });
 }
 

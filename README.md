@@ -70,7 +70,7 @@ Native installers:
 | Copilot CLI | `copilot plugin marketplace add FacundoLongo/longevo`, then `copilot plugin install longevo@longevo` (not tested yet) |
 | Manual | `git clone https://github.com/FacundoLongo/longevo && longevo/scripts/install.sh` |
 
-Then open your agent in a repo and run `/longevo-init` (`$longevo-init` in Codex).
+Then open your agent in a repo and run `/longevo-init`: `/longevo:longevo-init` after the Claude Code plugin install ([D13](docs/decisions/packaging.md)), `$longevo-init` in Codex, and `/skills` to pick it in Gemini CLI.
 
 ## Works with
 
@@ -85,7 +85,7 @@ Longevo uses the [Agent Skills](https://agentskills.io/specification) format, so
 | 3 | Living docs: `sync`, drift checks and external sources |
 | 4 | `brief` and `review` |
 
-Each step must work on two real repos before the next one starts. Details in the [roadmap](docs/roadmap.md).
+Each step passed its eval gate; use on real repos and in all five agents comes before 1.0. Details in the [roadmap](docs/roadmap.md).
 
 ## Contributing
 

@@ -60,7 +60,7 @@ Longevo compares three sources of truth in pairs: external sources (what the bus
 
 Everything goes into one gap report. Each finding has a proposal: open a brief for a missing rule, ask the testing skill for a missing test, ask you when the doc and the code disagree, or offer a small diff for a stale doc.
 
-To avoid noise, big reformats and lockfiles do not count. A doc that is still true is confirmed again without changes to its text.
+Lockfiles and generated files do not count. Big commits do ([D12](../decisions/docs.md)): a reformat makes docs stale once, and a doc that is still true is confirmed again without changes to its text.
 
 ## Sources
 

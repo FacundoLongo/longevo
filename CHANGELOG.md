@@ -28,16 +28,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ### Fixed
 
-- A change that was reverted later no longer makes a doc stale, moving a file out of `covers` does, and a new `verified` date that is not committed yet counts as a check made on that date.
-- `apply` no longer fails when the terminal leaves an empty pipe on stdin.
+- A change that was reverted later no longer makes a doc stale; moving a file out of `covers`, a squash merge of a large change ([D12](docs/decisions/docs.md)) and moving the doc itself are handled. A new `verified` date that is not committed yet counts as a check made on that date.
+- `apply` no longer fails when the terminal leaves an empty pipe on stdin. An operation that needs input and gets none stops with a clear error instead of writing an empty block; `--input <file>` works where heredocs do not.
 - Files with CRLF line endings keep them when Longevo writes the block or `@AGENTS.md`, and block markers inside a code fence count as an example.
 - Writing a `checked` date keeps comments and the other sources as they are.
 - Frontmatter with nested maps, block text or escaped quotes is read. TOML frontmatter (`+++`) gets a clear message instead of a second frontmatter block.
-- Rules with no title, an en dash, `path#L3-L5` code refs, a test name inside longer text or `####` subheadings are read.
+- Rules with no title, an en dash, `path#L3-L5` code refs, or a quoted or backticked test name after a path are read. Under a deeper subheading, like `#### Scenarios`, only WHEN/THEN lines count; put `Code`, `Test` and `Status` right after the rule heading.
 - A finished brief whose criteria are already rules is not proposed again.
-- `review` works in a repo with no commits yet, and leaves out the changes you declined.
-- The scan reads UTF-16 instruction files, reports the ones it cannot read, and shows which package.json or Makefile defines each cited command.
+- `review` works in a repo with no commits yet, says why when it is on the default branch or outside git, and leaves out the changes you declined.
+- The scan reads UTF-16 instruction files, reports the ones it cannot read, and shows which package.json or Makefile defines each cited command. `pnpm vitest` and other package binaries are no longer reported as missing scripts.
 - Call assertions inside string fixtures no longer mark a test file as a bad example.
+- Secrets are redacted on removed diff lines, on `+` and `-` YAML lines in `sync` diffs, across every line of a private key and in error messages. `apply` never writes into `.git` spelled in another case, like `.GIT` on macOS.
+- Docs that start with a byte order mark work like any other, and a doc with `covers` but no `verified` date is reported.
+- Skills show `git status --short` after they write, so new files show too.
 - Clear errors for a missing folder, an option without a value, impossible dates, malformed `apply` input, `covers` that are not globs and links to folders that do not exist. Outside git, `decline` says it cannot remember instead of failing, and `sync` says drift was not checked.
 
 ## [0.1.0] - 2026-10-11

@@ -4,7 +4,7 @@ How to write the changes the user picked. Dates and generated files go through t
 
 ## The engine
 
-Pass the input as JSON on stdin with a heredoc:
+Pass the input as JSON on stdin with a heredoc. Where heredocs do not work (PowerShell), write the JSON to a file and add `--input <file>`:
 
 ```bash
 node <this skill's folder>/scripts/longevo.mjs apply verify --cwd . <<'JSON'
@@ -44,4 +44,4 @@ Keys name the newest change under the doc, or the month for sources, so a declin
 3. `sources`, then `coverage`, so both see the new docs and rules.
 4. `decline`, with the keys of every item the user did not pick.
 
-Then run `git diff --stat` and show it. Never stage or commit.
+Then run `git status --short` and `git diff --stat` and show both, so new files show too. Never stage or commit.

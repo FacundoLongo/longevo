@@ -15,6 +15,8 @@ The choices that shape Longevo, grouped by area. Read the index first. Open an a
 | D9 | Keep Longevo's docs in `docs/` and its state in `.git` | [docs](docs.md) | Accepted |
 | D10 | Give each skill its own copy of the shared scripts | [packaging](packaging.md) | Accepted |
 | D11 | Anchor drift on the frontmatter `verified` value, with a time for a second check in one day | [docs](docs.md) | Accepted |
+| D12 | Count big commits in drift checks | [docs](docs.md) | Accepted |
+| D13 | Keep the plugin namespace and document both names | [packaging](packaging.md) | Accepted |
 
 ## When to write a decision
 

@@ -4,7 +4,7 @@ How to build the list of changes and write the ones the user picked. Structured 
 
 ## The engine
 
-Pass the input as JSON on stdin with a heredoc, from the folder you scanned:
+Pass the input as JSON on stdin with a heredoc, from the folder you scanned. Where heredocs do not work (PowerShell), write the JSON to a file and add `--input <file>`:
 
 ```bash
 node <this skill's folder>/scripts/longevo.mjs apply block --cwd . <<'JSON'
@@ -61,7 +61,7 @@ Each one prints `{"op", "file", "status"}` with `written` or `unchanged`, or `{"
 
 - Move a rule only when AGENTS.md does not say it already. Keep the wording.
 - When two files disagree (npm against pnpm), keep the one the repo shows (here, the lockfile) and say why in the item. Ask before the list only when nothing in the repo settles it.
-- Remove the moved lines from the source file in the same change. If the source file has no rules left, the change deletes it.
+- Remove the moved lines from the source file in the same change. If the source file has no rules left, the change deletes it; when that file is CLAUDE.md, leave the `import` item out of the list, because there is nothing left to import into.
 - Leave rules that only make sense for one agent, like a Claude Code tool setting, and say why.
 
 ## Order
@@ -73,4 +73,4 @@ Each one prints `{"op", "file", "status"}` with `written` or `unchanged`, or `{"
 5. `coverage`, last, so it sees the new docs.
 6. `decline`, with the keys of every item the user did not pick.
 
-Then run `git diff --stat` and show it.
+Then run `git status --short` and `git diff --stat` and show both, so new files show too.

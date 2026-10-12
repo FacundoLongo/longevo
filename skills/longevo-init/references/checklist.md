@@ -21,6 +21,8 @@ What init reviews. The script covers the first group; you check the second group
 | `doc-stale` | Code in a doc's `covers` changed after its `verified` date |
 | `covers-match-nothing` | A `covers` glob matches no file |
 | `frontmatter-invalid` | A doc with Longevo keys has frontmatter the engine cannot read |
+| `doc-not-verified` | A doc has `covers` but no `verified` date, so it can never go stale |
+| `instruction-unreadable` | An instruction file over 1 MB, with NUL bytes, or a link to nothing: its rules were not checked |
 | `missingPaths` | Cited paths that do not exist |
 | `security` | Secrets, personal paths or "install from the internet" lines |
 

@@ -49,10 +49,9 @@ test('code outside covers does not count', () => {
   assert.equal(docs(root).living[0].stale, false);
 });
 
-test('lockfiles and big reformat commits do not make a doc stale', () => {
+test('lockfiles do not make a doc stale', () => {
   const root = makeRepo({ 'docs/pay.md': DOC, 'src/pay/a.ts': '1' });
   commit(root, { 'src/pay/package-lock.json': '{}' }, 'lock');
-  commit(root, Object.fromEntries(Array.from({ length: 101 }, (_, i) => [`src/pay/f${i}.ts`, 'x'])), 'format');
   assert.equal(docs(root).living[0].stale, false);
 });
 

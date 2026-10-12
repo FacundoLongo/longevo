@@ -13,19 +13,19 @@ Give the change a second look from a reviewer that did not write it. Report what
 node <this skill's folder>/scripts/longevo.mjs review --cwd .
 ```
 
-Add `--base <branch or commit>` when the user names one; the review starts where the branch split from it. If `base.fallback` is set, say why before anything else: `no-merge-base` means a shallow clone or unrelated history (suggest `git fetch --unshallow` or `--base`), `no-default-branch` means the user should pass `--base`, and `no-commits` means every file is new. If `nothing` is true, say there is nothing to review and stop.
+Add `--base <branch or commit>` when the user names one; the review starts where the branch split from it. If `base.fallback` is set, say why before anything else: `no-merge-base` means a shallow clone or unrelated history (suggest `git fetch --unshallow` or `--base`), `no-default-branch` means the user should pass `--base`, `on-default-branch` means only uncommitted changes are reviewed (suggest a branch or `--base`), `no-commits` means every file is new, and `no-git` means this folder is not a git repo, so there is nothing to compare. If `nothing` is true, say there is nothing to review and stop.
 
 ## 2. Build the packet
 
 The reviewer gets only:
 
-- the diff: run `diffCommand` (it leaves out generated files, vendored files and lockfiles), and the content of each untracked file in `changed` that is not `skipped`;
+- the diff: run `diffCommand` (it leaves out generated files, vendored files and lockfiles; it is a list of arguments, so run it without a shell or quote each item), and the content of each untracked file in `changed` that is not `skipped`;
 - the rules in `rules`;
 - `docs/testing.md`;
 - the brief in `brief` (its acceptance criteria and "What must not change");
 - the docs in `docsToUpdate`.
 
-Before you send it, replace every line listed in `security` with `[redacted]`. Nothing else from this conversation, and nothing about how the code was written. If `diffLines.added` is over 3000, do not paste the diff: give the reviewer `diffCommand` and the list of files, and ask it to read them one at a time.
+Before you send it, replace every line listed in `security` with `[redacted]`; an entry with `removed: true` is a removed line, numbered as in the old file. Nothing else from this conversation, and nothing about how the code was written. If `diffLines.added` is over 3000, do not paste the diff: give the reviewer `diffCommand`, the list of files and the `security` entries, ask it to read the files one at a time, and tell it never to quote those lines.
 
 ## 3. Send it to a fresh reviewer
 
@@ -47,7 +47,7 @@ Only doc changes go in the numbered list:
 - `verify` for a doc that is still true;
 - `done` for the brief, when every acceptance criterion has a test.
 
-Each item has the file, one line on why, the diff and a key (`diff:<doc>:<first 40 characters>`, `verify:<doc>`, `done:<brief>`). Leave out any item whose key is in `declined`, and if any were left out, say so in one line: "N changes are hidden because you declined them. Say 'show declined' to see them again." When the user says that, run `apply undecline` with `{"all": true}` and build the list again. If the list is empty, end with the report. Otherwise end with:
+Each item has the file, one line on why, the diff and a key: `diff:<doc>:<first 40 characters of the changed line>`, `verify:<doc>:<head>` (the `head` from the report, so a decline lasts until new commits) or `done:<brief>`. Leave out any item whose key is in `declined`, and if any were left out, say so in one line: "N changes are hidden because you declined them. Say 'show declined' to see them again." When the user says that, run `apply undecline` with `{"all": true}` and build the list again. If the list is empty, end with the report. Otherwise end with:
 
 > Which ones do I apply? [All / Pick numbers / None]
 
@@ -59,7 +59,7 @@ node <this skill's folder>/scripts/longevo.mjs apply verify --cwd . <<'JSON'
 JSON
 ```
 
-`done` takes `{"doc": "<the brief's path>"}`. Run `apply decline` with `{"keys": [...]}` for the rest. Then show `git diff --stat`. Never stage or commit.
+`done` takes `{"doc": "<the brief's path>"}`. Run `apply decline` with `{"keys": [...]}` for the rest. Then show `git status --short`, so new files show too, and `git diff --stat`. Never stage or commit.
 
 ## Rules
 

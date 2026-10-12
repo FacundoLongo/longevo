@@ -53,10 +53,10 @@ A script generates `docs/coverage.md` ([D8](../decisions/docs.md)). Nobody edits
 | Table | What it shows |
 | --- | --- |
 | Tests by area | Test files: end to end, integration, other, and how many mock storage |
-| Docs by area | The docs that cover each area, with their `verified` date |
+| Docs by area | The docs that cover each area, with the oldest `verified` date among them |
 | Rules | Each rule with its status, code and test. Only when docs have rules |
 
-An area is a workspace package, or a top-level folder in a repo without workspaces. The test kind comes from the path or the file name (`e2e`, `integration`, `*IT.java`). A test without a marker counts as other. The file has no timestamps and does not store whether a doc is stale, so it changes only when tests or docs change.
+An area is a workspace package, or a top-level folder in a repo without workspaces; under `src`, `packages`, `apps`, `services`, `internal`, `cmd` and `libs` it is the folder one level down. The test kind comes only from the path or the file name (`e2e`, `integration`, `*IT.java`), so a test without a marker counts as other, whatever it does. The file has no timestamps and does not store whether a doc is stale, so it changes only when tests or docs change.
 
 ## Business rules
 

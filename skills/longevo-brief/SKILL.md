@@ -23,8 +23,10 @@ Search the repo for the names, routes, models and messages in the task. List the
 ## 3. Collect context
 
 ```
-node <this skill's folder>/scripts/longevo.mjs context --cwd . --paths <comma-separated files or globs>
+node <this skill's folder>/scripts/longevo.mjs context --cwd . --paths "src/refunds/**,src/payments/charge.ts"
 ```
+
+Quote the list, so the shell does not expand the globs.
 
 It returns the docs and rules that cover those paths, the tests near them, the golden tests from `docs/testing.md`, their coverage rows, how often they change and open briefs. Read only what it points to. If an open brief already covers the same code, say so and ask whether to continue that one.
 
@@ -68,7 +70,7 @@ Never stage or commit. If the user does not pick it, save nothing; the brief was
 
 ## 7. Next step
 
-Say: "Design and plan with your tool (Superpowers brainstorming, OpenSpec, Spec Kit or plan mode), with the brief as input. When the work is done, mark it with `apply done` and run `longevo-sync`; it moves the criteria into the rules."
+Say: "Design and plan with your tool (Superpowers brainstorming, OpenSpec, Spec Kit or plan mode), with the brief as input. When the work is done, run `longevo-review`: it proposes marking the brief done once every criterion has a test. Then run `longevo-sync`; it moves the criteria into the rules." To mark it done yourself, run `longevo.mjs apply done` with `{"doc": "<the brief's path>"}` on stdin.
 
 ## Rules
 

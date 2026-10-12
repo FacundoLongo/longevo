@@ -89,3 +89,17 @@ Status: Accepted · 2026-10-11
 - Examples in a doc's body never move the anchor, and a doc can be checked twice in one day.
 - Most docs keep a plain date; a few show a time.
 - One more git call for each candidate commit.
+
+## D12. Count big commits in drift checks
+
+Status: Accepted · 2026-10-11
+
+**Context.** Drift checks skipped commits that touch more than 100 files, to ignore repo-wide reformats. A squash merge of a large change is also such a commit, so the docs it made wrong never went stale.
+
+**Options.** Keep the limit · Count every commit · Count big commits only for whitespace changes
+
+**Decision.** Drift counts every commit after the anchor, big ones included; lockfiles and generated files still do not count. The 100-file limit stays only for hotspots.
+
+**Consequences.**
+- A squash merge or a large change always makes the docs it touches stale.
+- A repo-wide reformat makes the docs it touches stale once; `sync` confirms them with new `verified` dates and no text changes.

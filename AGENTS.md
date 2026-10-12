@@ -5,7 +5,7 @@ Agent skills for better tests and docs that stay true to the code.
 ## Where things are
 
 - `skills/`: one folder per skill (`longevo-<name>/` with `SKILL.md` and `references/`).
-- `src/`: the engine (`longevo.mjs` with `scan`, `apply` and `coverage`). Each command skill carries a copy in its `scripts/` folder. Never edit the copies; edit `src/` and run `npm run engine`.
+- `src/`: the engine (`longevo.mjs` with `scan`, `sync`, `context`, `review`, `apply` and `coverage`). Each command skill carries a copy in its `scripts/` folder. Never edit the copies; edit `src/` and run `npm run engine`.
 - `scripts/`: repo tools: the skill validator, the engine copier and the manual installer.
 - `tests/`: `node:test` tests for the engine, the validator, the manifests and the installer.
 - `evals/`: eval cases that run each skill with and without Longevo (`claude plugin eval`). Run them when you change a skill; see CONTRIBUTING.md.

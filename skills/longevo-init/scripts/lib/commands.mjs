@@ -1,7 +1,9 @@
 import { join } from 'node:path';
 import { readText } from './text.mjs';
 
-const NPM = /^(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?([\w:.-]+)/;
+const NPM = /^(npm|pnpm|yarn|bun)\s+(run\s+)?([\w:.-]+)/;
+// pnpm, yarn and bun run a package binary when no script has the name; test and start always mean a script.
+const SCRIPT_ALIASES = new Set(['test', 'start']);
 const MAKE = /^(?:make|just)\s+([\w.-]+)/;
 const TOOL = /^(?:npx|pnpx|bunx|go|pytest|python3?|uv|poetry|tox|cargo|node|deno|vitest|jest|swift|xcodebuild|dotnet|mvn|\.\/mvnw|gradle|\.\/gradlew|rspec|bundle|rails|bin\/rails|rake|mix|php|composer|vendor\/bin\/(?:phpunit|pest)|flutter|dart|turbo|nx)\b/;
 const BUILTIN = new Set(['install', 'i', 'ci', 'add', 'remove', 'rm', 'exec', 'dlx', 'x', 'init', 'create', 'publish', 'update', 'upgrade', 'up', 'link', 'outdated', 'audit', 'why', 'run', 'login', 'version', 'help', 'dedupe', 'prune']);
@@ -43,7 +45,7 @@ export function citedCommands(file, spans) {
   for (const span of spans) {
     const npm = span.text.match(NPM);
     const make = span.text.match(MAKE);
-    if (npm) cited.push({ file, line: span.line, text: span.text, kind: 'script', name: npm[1] });
+    if (npm) cited.push({ file, line: span.line, text: span.text, kind: 'script', name: npm[3], runner: npm[1], run: Boolean(npm[2]) });
     else if (make) cited.push({ file, line: span.line, text: span.text, kind: 'target', name: make[1] });
     else if (TOOL.test(span.text)) cited.push({ file, line: span.line, text: span.text, kind: 'tool', name: span.text.split(/\s+/)[0] });
   }
@@ -55,7 +57,8 @@ export function commandFindings(cited, real) {
   const scripts = new Set(real.scripts);
   const targets = new Set(real.targets);
   for (const command of cited) {
-    const missingScript = command.kind === 'script' && !BUILTIN.has(command.name) && !scripts.has(command.name);
+    const mustBeScript = command.runner === 'npm' || command.run || SCRIPT_ALIASES.has(command.name);
+    const missingScript = command.kind === 'script' && mustBeScript && !BUILTIN.has(command.name) && !scripts.has(command.name);
     const missingTarget = command.kind === 'target' && !targets.has(command.name);
     if (missingScript || missingTarget) {
       const where = missingScript ? `package.json has a "${command.name}" script` : `Makefile or justfile has a "${command.name}" target`;

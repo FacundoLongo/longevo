@@ -1,7 +1,7 @@
 import { lstatSync, realpathSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { git } from './repo.mjs';
-import { unreadableReason } from './text.mjs';
+import { fenceKinds, unreadableReason } from './text.mjs';
 
 const PATTERNS = [
   /(^|\/)AGENTS\.md$/,
@@ -29,8 +29,12 @@ export function ownerDir(file) {
     .replace(/(^|\/)\.claude$/, '');
 }
 
-// Text outside code, so an example in backticks is not read as an import.
-export const prose = (text) => text.replace(/```[\s\S]*?```/g, '').replace(/`[^`\n]*`/g, '');
+// Text outside code, so an example in backticks or in a fence is not read as an import.
+export function prose(text) {
+  const lines = text.split('\n');
+  const kinds = fenceKinds(lines);
+  return lines.filter((_, index) => !kinds[index]).join('\n').replace(/`[^`\n]*`/g, '');
+}
 
 function rawSize(root, path, text) {
   try {

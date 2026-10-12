@@ -70,7 +70,8 @@ export function contextReport(cwd, { paths = [] } = {}) {
     tests: { near: analyzeTests(sc.root, near, packages).map(({ file, kind, mocksStorage }) => ({ file, kind, mocksStorage })), area },
     golden: goldenTests(sc.root, files),
     coverage,
-    hotspots: hotspots(sc, files, packages, { generated }).files.filter((hot) => touches(hot.file)),
+    // Every file's count, not only the busiest ten in the repo, then only the paths of this task.
+    hotspots: hotspots(sc, files, packages, { generated, limit: Infinity }).files.filter((hot) => touches(hot.file)),
     briefs: briefs(sc, files).filter((brief) => brief.status !== 'done' && targets.some((file) => matchesAny(file, brief.covers))).map(({ path, status, task }) => ({ path, status, task })),
   });
 }

@@ -40,7 +40,8 @@ function inside(sc, path, { base = sc.root, markdown = false } = {}) {
     throw new Error(`${path} must be a path inside the repo.`);
   }
   const clean = path.replace(/\\/g, '/').replace(/^\.\//, '');
-  if (/(^|\/)\.git(\/|$)/.test(clean)) throw new Error(`${path} is inside .git; Longevo never writes there.`);
+  // Case-insensitive: on macOS and Windows .GIT is the same folder as .git.
+  if (/(^|\/)\.git(\/|$)/i.test(clean)) throw new Error(`${path} is inside .git; apply never writes there.`);
   if (markdown && !/\.mdx?$/.test(clean)) throw new Error(`${path} is not a Markdown file.`);
   const full = join(base, clean);
   if (existsSync(full)) {
@@ -66,7 +67,7 @@ function gitDirs(sc) {
     .filter(Boolean)
     .map((dir) => {
       try {
-        return realpathSync(resolve(sc.root, dir));
+        return realpathSync.native(resolve(sc.root, dir));
       } catch {
         return null;
       }
@@ -77,7 +78,7 @@ function gitDirs(sc) {
 // The place a write really lands: links (also dangling ones) and linked folders are followed. It must be inside
 // the repo and outside .git, or nothing is written.
 function guardTarget(sc, path) {
-  const root = realpathSync(sc.root);
+  const root = realpathSync.native(sc.root);
   for (let dir = dirname(path); dir !== sc.root && under(dir, sc.root); dir = dirname(dir)) {
     let stat = null;
     try {
@@ -100,9 +101,10 @@ function guardTarget(sc, path) {
   }
   let probe = target;
   while (!existsSync(probe) && dirname(probe) !== probe) probe = dirname(probe);
-  const real = join(realpathSync(probe), relative(probe, target));
+  // The native call gives the real spelling of each folder, so .GIT compares equal to .git where the disk ignores case.
+  const real = join(realpathSync.native(probe), relative(probe, target));
   if (!under(real, root)) throw new Error(`${rel(sc, path)} points outside the repo; Longevo writes only inside it.`);
-  if (gitDirs(sc).some((dir) => under(real, dir))) throw new Error(`${rel(sc, path)} is inside .git; Longevo never writes there.`);
+  if (gitDirs(sc).some((dir) => under(real, dir))) throw new Error(`${rel(sc, path)} is inside .git; apply never writes there.`);
 }
 
 function write(sc, op, path, before, after, extra = {}) {
@@ -305,6 +307,7 @@ function undecline(sc, { keys = [], all = false }) {
 }
 
 const OPS = { block, import: importAgents, gemini, frontmatter, verify, checked, sources, coverage, decline, undecline, brief, done };
+export const APPLY_OPS = Object.keys(OPS);
 
 export function apply(op, cwd, input = {}, { today = localDate(), now = new Date() } = {}) {
   if (!Object.hasOwn(OPS, op)) throw new Error(`Unknown apply operation: ${op}. Use ${Object.keys(OPS).join(', ')}.`);

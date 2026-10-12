@@ -17,7 +17,7 @@ Longevo is a small set of agent skills. It improves what a coding agent reads an
 | Longevo does | Longevo does not |
 | --- | --- |
 | Review any repo or folder and propose fixes | Run your process or replace Superpowers |
-| Keep docs alive and check them against the code | Add gates. The only hook is optional and only reports |
+| Keep docs alive and check them against the code | Add gates. A session-start hook that only reports is planned, and optional |
 | Bring business rules from external tools into the repo | Copy external pages. It keeps short rules with a link |
 | Make agents write fewer, better tests | Write anything without your OK |
 | Prepare a brief for each task | Do spec-driven development itself |

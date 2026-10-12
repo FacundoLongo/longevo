@@ -238,3 +238,40 @@ test('checked keeps comment lines and other items of the sources list', () => {
   apply('checked', root, { doc: 'docs/a.md', url: 'https://b' }, { today: '2026-10-11' });
   assert.match(read(root, 'docs/a.md'), /  # Owned by the billing team\.\n  - url: https:\/\/a\n    title: A # main page\n    checked: 2026-10-11\n  - url: https:\/\/b\n    checked: 2026-10-11\n---/);
 });
+
+test('checked handles inline source lists and a comment on the sources line', () => {
+  const inline = makeRepo({ 'docs/a.md': '---\nsources: [https://a.com, https://b.com]\n---\n# A\n' });
+  apply('checked', inline, { doc: 'docs/a.md', url: 'https://b.com' }, { today: '2026-10-11' });
+  assert.match(read(inline, 'docs/a.md'), /sources:\n  - url: https:\/\/a\.com\n  - url: https:\/\/b\.com\n    checked: 2026-10-11\n---/);
+  const commented = makeRepo({ 'docs/a.md': '---\nsources: # cited by the rules\n  - url: https://a.com\n---\n# A\n' });
+  apply('checked', commented, { doc: 'docs/a.md', url: 'https://a.com' }, { today: '2026-10-11' });
+  assert.equal(read(commented, 'docs/a.md'), '---\nsources: # cited by the rules\n  - url: https://a.com\n    checked: 2026-10-11\n---\n# A\n');
+});
+
+test('checked writes at the indent of the item fields and never inside a nested map', () => {
+  const nested = '---\nsources:\n  - url: https://a\n    archive:\n      checked: 2019-01-01\n    checked: 2020-01-01\n---\n';
+  const root = makeRepo({ 'docs/a.md': nested, 'docs/b.md': '---\nsources:\n  -   url: https://b\n      title: B\n---\n' });
+  apply('checked', root, { doc: 'docs/a.md', url: 'https://a' }, { today: '2026-10-11' });
+  assert.equal(read(root, 'docs/a.md'), nested.replace('checked: 2020-01-01', 'checked: 2026-10-11'));
+  apply('checked', root, { doc: 'docs/b.md', url: 'https://b' }, { today: '2026-10-11' });
+  assert.equal(read(root, 'docs/b.md'), '---\nsources:\n  -   url: https://b\n      title: B\n      checked: 2026-10-11\n---\n');
+});
+
+test('a bare source URL keeps its comment when it gets a checked date', () => {
+  const root = makeRepo({ 'docs/a.md': '---\nsources:\n  - https://a.com # main policy\n---\n' });
+  apply('checked', root, { doc: 'docs/a.md', url: 'https://a.com' }, { today: '2026-10-11' });
+  assert.equal(read(root, 'docs/a.md'), '---\nsources:\n  - url: https://a.com # main policy\n    checked: 2026-10-11\n---\n');
+});
+
+test('a fence closes only on a matching fence, so markers after it are the block', () => {
+  const text = '# Rules\n\n~~~text\n```\n~~~\n\n<!-- longevo:start -->\n## Longevo\n- Start each session with the `longevo-init` skill.\n<!-- longevo:end -->\n';
+  const root = makeRepo({ 'AGENTS.md': text });
+  assert.equal(apply('block', root, {}).status, 'unchanged');
+  assert.equal(read(root, 'AGENTS.md'), text);
+});
+
+test('a CRLF file whose end marker is the last line gets no stray carriage return', () => {
+  const root = makeRepo({ 'AGENTS.md': '# A\r\n<!-- longevo:start -->\r\nold\r\n<!-- longevo:end -->' });
+  apply('block', root, {});
+  assert.equal(read(root, 'AGENTS.md'), '# A\r\n<!-- longevo:start -->\r\n## Longevo\r\n- Start each session with the `longevo-init` skill.\r\n<!-- longevo:end -->');
+});

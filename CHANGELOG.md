@@ -28,7 +28,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ### Fixed
 
-- A change that was reverted later no longer makes a doc stale, and a new `verified` date that is not committed yet counts as a check.
+- A change that was reverted later no longer makes a doc stale, moving a file out of `covers` does, and a new `verified` date that is not committed yet counts as a check made on that date.
 - `apply` no longer fails when the terminal leaves an empty pipe on stdin.
 - Files with CRLF line endings keep them when Longevo writes the block or `@AGENTS.md`, and block markers inside a code fence count as an example.
 - Writing a `checked` date keeps comments and the other sources as they are.
@@ -38,7 +38,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 - `review` works in a repo with no commits yet, and leaves out the changes you declined.
 - The scan reads UTF-16 instruction files, reports the ones it cannot read, and shows which package.json or Makefile defines each cited command.
 - Call assertions inside string fixtures no longer mark a test file as a bad example.
-- Clear errors for a missing folder, an option without a value, impossible dates, malformed `apply` input and links to folders that do not exist. Outside git, `decline` says it cannot remember instead of failing, and `sync` says drift was not checked.
+- Clear errors for a missing folder, an option without a value, impossible dates, malformed `apply` input, `covers` that are not globs and links to folders that do not exist. Outside git, `decline` says it cannot remember instead of failing, and `sync` says drift was not checked.
 
 ## [0.1.0] - 2026-10-11
 

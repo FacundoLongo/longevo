@@ -1,5 +1,6 @@
 // Collects facts about the folder for longevo-init. Read-only, except the session marker in .git.
 // Home files are read only for agent setup (names only), and shown as ~/...
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import { AGENTS, agentsInUse, geminiFiles, installedSkills, mcpServers, skillFindings } from './lib/agents.mjs';
@@ -36,7 +37,8 @@ export function scan(cwd, { markSession = false, home = homedir() } = {}) {
       return dirs.includes(dir) || dir === scopeDir || dir.startsWith(`${scopeDir}/`) || file.startsWith('.github/workflows/');
     });
 
-  const instructionFiles = findInstructionFiles(files, dirs);
+  // A file deleted in the working tree but still in the index is gone for every agent.
+  const instructionFiles = findInstructionFiles(files, dirs).filter((file) => existsSync(join(sc.root, file)));
   const raw = Object.fromEntries(instructionFiles.map((file) => [file, readText(join(sc.root, file))]));
   const texts = Object.fromEntries(instructionFiles.map((file) => [file, raw[file] ?? '']));
   const instructionInventory = inventory(sc, instructionFiles, raw);

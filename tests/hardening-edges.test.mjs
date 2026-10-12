@@ -94,3 +94,26 @@ test('import uses CLAUDE.md even when .claude links outside the repo', () => {
   assert.ok(read(root, 'CLAUDE.md').startsWith('@AGENTS.md\n'));
   assert.equal(readFileSync(join(away, 'CLAUDE.md'), 'utf8'), '# Home rules\n');
 });
+
+test('apply block with an open empty stdin refuses instead of writing an empty block', async () => {
+  const root = makeRepo({ 'AGENTS.md': '# A\n\n<!-- longevo:start -->\n## Longevo\n- Run all tests: `npm test`\n- Start each session with the `longevo-init` skill.\n<!-- longevo:end -->\n' });
+  const before = read(root, 'AGENTS.md');
+  const child = spawn(process.execPath, [cli, 'apply', 'block', '--cwd', root], { stdio: ['pipe', 'pipe', 'pipe'] });
+  let out = '';
+  child.stdout.on('data', (chunk) => { out += chunk; });
+  const code = await new Promise((done) => {
+    const timer = setTimeout(() => { child.kill(); done('timeout'); }, 10_000);
+    child.on('exit', (status) => { clearTimeout(timer); done(status); });
+  });
+  child.stdin.destroy();
+  assert.equal(code, 1, out);
+  assert.match(JSON.parse(out).error, /apply block needs its input as JSON on stdin/);
+  assert.equal(read(root, 'AGENTS.md'), before);
+});
+
+test('a brief with covers that are not globs does not crash the review', async () => {
+  const { reviewReport } = await import('../src/review.mjs');
+  const root = makeRepo({ 'docs/work/2026-10-11-x/brief.md': '---\nstatus: open\ncovers:\n  paths: src/**\n---\n# X\n', 'src/a.ts': '1\n' });
+  writeFileSync(join(root, 'src/a.ts'), '2\n');
+  assert.equal(reviewReport(root).brief, null);
+});

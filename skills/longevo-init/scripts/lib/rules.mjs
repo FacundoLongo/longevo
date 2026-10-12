@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { git } from './repo.mjs';
 import { isTestFile } from './tests.mjs';
-import { readText } from './text.mjs';
+import { fenceKinds, readText } from './text.mjs';
 
 export const RULE_STATUSES = ['implemented and tested', 'implemented without test', 'missing', 'contradicts', 'no source'];
 
@@ -21,34 +21,39 @@ function parseCode(value) {
 }
 
 // The test name: the first quoted or backticked part, so a line like `name` in tests/x.test.ts still works.
+// A double-quoted name wins; a backticked or single-quoted name counts only at the start, so apostrophes in an
+// unquoted name stay part of it.
 function parseTest(value) {
-  const quoted = value.match(/`([^`]+)`|"([^"]+)"|'([^']+)'/);
-  return quoted ? (quoted[1] ?? quoted[2] ?? quoted[3]).trim() : value.trim();
+  const double = value.match(/"([^"]+)"/);
+  if (double) return double[1].trim();
+  const lead = value.match(/^`([^`]+)`|^'([^']+)'(?=\s|$)/);
+  if (lead) return (lead[1] ?? lead[2]).trim();
+  return value.trim();
 }
 
 export function parseRules(doc, text) {
   const rules = [];
   let rule = null;
-  let inFence = false;
-  text.split('\n').forEach((line, index) => {
+  let inSubheading = false;
+  const lines = text.split('\n');
+  const kinds = fenceKinds(lines);
+  lines.forEach((line, index) => {
     // A rule written inside a code block is an example of the format, not a rule.
-    if (/^\s*(```|~~~)/.test(line)) {
-      inFence = !inFence;
-      return;
-    }
-    if (inFence) return;
+    if (kinds[index]) return;
     const heading = line.match(HEADING);
     const level = line.match(/^(#{1,6})\s/)?.[1].length;
     if (heading) {
       rule = { id: heading[2], title: heading[3] ?? '', doc, line: index + 1, source: null, code: [], test: null, status: null, scenarios: 0 };
       Object.defineProperty(rule, 'level', { value: heading[1].length, enumerable: false });
+      inSubheading = false;
       rules.push(rule);
     } else if (level && (!rule || level <= rule.level)) {
       rule = null;
     } else if (level) {
-      // A deeper subheading, like "#### Scenarios", is part of the rule.
+      // A deeper subheading, like "#### Scenarios", keeps the scenarios in the rule but not its fields.
+      inSubheading = true;
     } else if (rule) {
-      const field = line.match(FIELD);
+      const field = inSubheading ? null : line.match(FIELD);
       if (field) {
         const key = field[1].toLowerCase();
         const value = field[2].trim();

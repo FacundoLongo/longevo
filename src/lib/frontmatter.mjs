@@ -167,55 +167,72 @@ export function setFrontmatter(text, updates) {
       block.push(line);
       continue;
     }
-    let stop = start + 1;
-    while (stop < block.length && clean(block[stop]).trim() !== '' && /^(\s|-(\s|$))/.test(block[stop])) stop += 1;
-    block.splice(start, stop - start, line);
+    block.splice(start, keyEnd(block, start) - start, line);
   }
   return [lines[0], ...block, ...lines.slice(end)].join('\n');
 }
 
+// The line after a key's block: its indented lines and list items, and blank lines followed by more of them.
+function keyEnd(lines, start, limit = lines.length) {
+  const more = (line) => /^(\s|-(\s|$))/.test(line) && clean(line).trim() !== '';
+  let stop = start + 1;
+  while (stop < limit) {
+    if (more(lines[stop])) {
+      stop += 1;
+      continue;
+    }
+    let next = stop;
+    while (next < limit && clean(lines[next]).trim() === '') next += 1;
+    if (next === stop || next === limit || !more(lines[next])) break;
+    stop = next;
+  }
+  return stop;
+}
+
 // Sets the checked date of one source and leaves every other line of the list as it is, comments included.
-// A source written as a bare URL becomes a map with its url and checked date.
+// A source written as a bare URL becomes a map with its url and checked date. An inline list is rewritten.
 export function setSourceChecked(text, url, date) {
   const parsed = parseFrontmatter(text);
   if (parsed.error) throw new Error(parsed.error);
   const lines = text.split('\n');
   const eol = lines[0].endsWith('\r') ? '\r' : '';
   const end = closingLine(lines);
-  const start = lines.findIndex((line, index) => index > 0 && index < end && /^sources:\s*$/.test(clean(line)));
-  if (start === -1) throw new Error(`The frontmatter has no sources list.`);
-  let stop = start + 1;
-  while (stop < end && (clean(lines[stop]).trim() === '' || /^(\s|-(\s|$))/.test(lines[stop]))) stop += 1;
+  const start = lines.findIndex((line, index) => index > 0 && index < end && /^sources:/.test(clean(line)));
+  if (start === -1 || !/^sources:\s*(#.*)?$/.test(clean(lines[start]))) {
+    const list = (Array.isArray(parsed.data.sources) ? parsed.data.sources : []).map((s) => (typeof s === 'string' ? { url: s } : s));
+    if (!list.some((s) => s.url === url)) throw new Error(`The sources list does not cite ${url}.`);
+    return setFrontmatter(text, { sources: list.map((s) => (s.url === url ? { ...s, checked: date } : s)) });
+  }
+  const stop = keyEnd(lines, start, end);
   const items = [];
   for (let i = start + 1; i < stop; i += 1) {
-    const match = clean(lines[i]).match(/^(\s*)-\s+(.*)$/);
-    if (match && (items.length === 0 || match[1].length <= items[0].indent)) items.push({ line: i, indent: match[1].length, rest: match[2] });
+    const match = clean(lines[i]).match(/^(\s*)-(\s+)(.*)$/);
+    if (match && (items.length === 0 || match[1].length <= items[0].indent)) {
+      items.push({ line: i, indent: match[1].length, fields: match[1].length + 1 + match[2].length, rest: match[3] });
+    }
   }
-  const urlOf = (rest) => {
-    const pair = rest.match(KEY_VALUE);
-    if (pair && !/^["']/.test(rest)) return pair[1] === 'url' ? scalar(pair[2]) : null;
-    return scalar(rest);
-  };
+  const isMap = (rest) => KEY_VALUE.test(rest) && !/^["']/.test(rest);
   for (const [index, item] of items.entries()) {
-    const last = (items[index + 1]?.line ?? stop) - 1;
     const own = [];
-    for (let i = item.line + 1; i <= last; i += 1) own.push(i);
-    const firstUrl = urlOf(item.rest);
-    const fieldUrl = own.map((i) => clean(lines[i]).trim().match(/^url:\s*(.*)$/)).find(Boolean);
-    if ((firstUrl ?? (fieldUrl ? scalar(fieldUrl[1]) : null)) !== url) continue;
-    const pad = ' '.repeat(item.indent + 2);
-    const isMap = KEY_VALUE.test(item.rest) && !/^["']/.test(item.rest);
-    if (!isMap) {
-      lines.splice(item.line, 1, `${' '.repeat(item.indent)}- url: ${renderScalar(url)}${eol}`, `${pad}checked: ${date}${eol}`);
+    for (let i = item.line + 1; i < (items[index + 1]?.line ?? stop); i += 1) own.push(i);
+    // Fields of the item sit exactly at the column of its first key; deeper lines belong to nested maps.
+    const field = (name) => own.find((i) => new RegExp(`^ {${item.fields}}${name}:`).test(clean(lines[i])));
+    const first = item.rest.match(KEY_VALUE);
+    const itemUrl = !isMap(item.rest) ? scalar(item.rest) : first[1] === 'url' ? scalar(first[2]) : field('url') !== undefined ? scalar(clean(lines[field('url')]).trim().slice(4)) : null;
+    if (itemUrl !== url) continue;
+    const pad = ' '.repeat(item.fields);
+    if (!isMap(item.rest)) {
+      const comment = /^["']/.test(item.rest) ? '' : item.rest.match(/\s+#.*$/)?.[0] ?? '';
+      lines.splice(item.line, 1, `${' '.repeat(item.indent)}- url: ${renderScalar(url)}${comment}${eol}`, `${pad}checked: ${date}${eol}`);
       return lines.join('\n');
     }
-    if (/^checked:/.test(item.rest)) {
-      lines[item.line] = `${' '.repeat(item.indent)}- checked: ${date}${eol}`;
+    if (first[1] === 'checked') {
+      lines[item.line] = `${clean(lines[item.line]).slice(0, item.fields)}checked: ${date}${eol}`;
       return lines.join('\n');
     }
-    const field = own.find((i) => /^\s+checked:/.test(clean(lines[i])));
-    if (field !== undefined) {
-      lines[field] = `${clean(lines[field]).match(/^\s+/)[0]}checked: ${date}${eol}`;
+    const checkedLine = field('checked');
+    if (checkedLine !== undefined) {
+      lines[checkedLine] = `${pad}checked: ${date}${eol}`;
       return lines.join('\n');
     }
     const body = [item.line, ...own].filter((i) => clean(lines[i]).trim() && !clean(lines[i]).trim().startsWith('#'));

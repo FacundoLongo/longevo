@@ -95,3 +95,9 @@ test('a finished brief whose criteria are already rules is not proposed again', 
   commit(root, { 'docs/domain/refunds.md': '### R-REF-002 · A refund expires after 24 hours\nSource: docs/work/2026-10-01-shorter-window/brief.md\nStatus: missing\n' }, 'Move the criteria');
   assert.deepEqual(syncReport(root, { home: root }).briefs.done.map((b) => b.path), ['docs/work/2026-10-02-fees/brief.md']);
 });
+
+test('a rule citing a brief whose name only starts with another brief does not hide it', () => {
+  const brief = '---\nstatus: done\ntask: "#7"\ncovers: ["src/**"]\n---\n# Brief\n';
+  const root = makeRepo({ 'docs/work/2026-10-11-auth/brief.md': brief, 'src/a.ts': '1\n', 'docs/domain/auth.md': '### R-AUTH-001 · Tokens expire\nSource: docs/work/2026-10-11-auth-tokens/brief.md\nStatus: missing\n' });
+  assert.deepEqual(syncReport(root, { home: root }).briefs.done.map((b) => b.path), ['docs/work/2026-10-11-auth/brief.md']);
+});

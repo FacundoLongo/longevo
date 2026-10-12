@@ -4,6 +4,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { generatedFiles } from './attributes.mjs';
 import { MAX_BLOCK_LINES, readBlock, renderBlock, writeBlock } from './block.mjs';
 import { coverageFor, COVERAGE_FILE } from './coverage.mjs';
+import { realDate } from './dates.mjs';
 import { parseFrontmatter, setFrontmatter, setSourceChecked } from './frontmatter.mjs';
 import { matches } from './glob.mjs';
 import { IMPORTS_AGENTS, prose } from './instructions.mjs';
@@ -32,7 +33,6 @@ const readOrNull = (path) => {
   }
 };
 const rel = (sc, path) => relative(sc.root, path).split(sep).join('/');
-const DATE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?$/;
 
 // Every path in an input must stay inside the repo, out of .git, and (once links are followed) under the root.
 function inside(sc, path, { base = sc.root, markdown = false } = {}) {
@@ -49,18 +49,6 @@ function inside(sc, path, { base = sc.root, markdown = false } = {}) {
     if (real !== root && !real.startsWith(`${root}${sep}`)) throw new Error(`${path} points outside the repo.`);
   }
   return full;
-}
-
-// The shape, and a day that exists on the calendar (no 2026-02-30), with a time of day that exists.
-function realDate(value) {
-  if (typeof value !== 'string' || !DATE.test(value)) return false;
-  const [day, time] = value.split('T');
-  const [y, m, d] = day.split('-').map(Number);
-  const date = new Date(Date.UTC(y, m - 1, d));
-  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return false;
-  if (!time) return true;
-  const [h, min, s] = time.split(':').map(Number);
-  return h < 24 && min < 60 && s < 60;
 }
 
 function checkDate(value, name = 'verified') {

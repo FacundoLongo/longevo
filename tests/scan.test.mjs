@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -283,4 +283,14 @@ test('call assertions inside a string literal, like a fixture, do not count', ()
   const fixture = "const code = \"expect(a).toHaveBeenCalled(); expect(b).toHaveBeenCalledWith(1); expect(c).toHaveBeenCalledTimes(2)\";\ntest('x', () => {});\n";
   const root = makeRepo({ 'src/a.test.ts': fixture });
   assert.deepEqual(scan(root).tests.antiGoldenCandidates, []);
+});
+
+test('an instruction file deleted but not staged is gone, not unreadable', () => {
+  const root = makeRepo({ 'AGENTS.md': '# Rules\n- `npm test`\n', 'CLAUDE.md': '@AGENTS.md\n' });
+  gitIn(root, 'rm', '-q', '--cached', 'CLAUDE.md');
+  gitIn(root, 'add', 'CLAUDE.md');
+  rmSync(join(root, 'CLAUDE.md'));
+  const report = scan(root);
+  assert.equal(report.findings.some((f) => f.id === 'instruction-unreadable'), false);
+  assert.deepEqual(report.instructions.files.map((f) => f.path), ['AGENTS.md']);
 });

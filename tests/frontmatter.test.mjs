@@ -90,3 +90,10 @@ test('TOML frontmatter is reported as not supported and never gets a second bloc
   assert.match(parseFrontmatter(text).error, /TOML frontmatter \(\+\+\+\) is not supported/);
   assert.throws(() => setFrontmatter(text, { verified: '2026-10-11' }), /TOML/);
 });
+
+test('replacing a key with block text or a list with blank lines leaves no orphan lines', () => {
+  const text = '---\nverified: |\n  2026-01-01\n\n  later\ncovers:\n  - "a/**"\n\n  - "b/**"\ntitle: x\n---\n';
+  const out = setFrontmatter(text, { verified: '2026-10-11', covers: ['c/**'] });
+  assert.equal(out, '---\nverified: 2026-10-11\ncovers: ["c/**"]\ntitle: x\n---\n');
+  assert.equal(parseFrontmatter(out).error, null);
+});

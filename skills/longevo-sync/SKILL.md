@@ -38,7 +38,7 @@ For each `source-not-checked` finding, follow [references/sources.md](references
 
 ## 5. Briefs marked done
 
-For each brief in `briefs.done`, propose its acceptance criteria as rules in `docs/domain/<area>.md` with the next free id, in the format of [references/rules-format.md](references/rules-format.md). Each new rule's `Source` is the brief's path; once a rule cites it, the brief is no longer listed.
+For each brief in `briefs.done`, propose its acceptance criteria as rules in `docs/domain/<area>.md` with the next free id, in the format of [references/rules-format.md](references/rules-format.md). Each new rule's `Source` is the brief's path; once a rule cites it, the brief is no longer listed. So propose every criterion of a brief in the same list, and decline the ones the user does not pick.
 
 ## 6. Ask, then propose
 

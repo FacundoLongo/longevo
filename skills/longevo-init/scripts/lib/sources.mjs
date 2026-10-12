@@ -1,6 +1,7 @@
 // External sources listed in each doc's frontmatter, and docs/sources.md generated from them.
 // Whether a source changed at the origin is checked by sync through MCP and never stored.
 import { join } from 'node:path';
+import { realDate } from './dates.mjs';
 import { parseFrontmatter } from './frontmatter.mjs';
 import { readText } from './text.mjs';
 
@@ -32,7 +33,7 @@ export function collectSources(sc, files) {
   return [...byUrl.values()].sort((a, b) => byText(a.url, b.url));
 }
 
-const readable = (date) => typeof date === 'string' && /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?$/.test(date) && !Number.isNaN(Date.parse(`${date.slice(0, 10)}T00:00:00Z`));
+const readable = realDate;
 
 export function sourceFindings(sources, today) {
   return sources

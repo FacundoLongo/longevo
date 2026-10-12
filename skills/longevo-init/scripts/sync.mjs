@@ -74,7 +74,10 @@ export function syncReport(cwd, { home = homedir(), today = localDate() } = {}) 
   });
   const current = readText(join(sc.root, SOURCES_FILE));
   // A finished brief whose folder a rule cites as its Source has already become rules.
-  const ruled = (brief) => rules.some((rule) => rule.source?.includes(brief.path.split('/')[2]));
+  const ruled = (brief) => {
+    const folder = brief.path.split('/')[2].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return rules.some((rule) => new RegExp(`(^|[^\\w-])${folder}($|[^\\w-])`).test(rule.source ?? ''));
+  };
   // What the skill needs to decide comes first; the long diffs come last.
   return redactDeep({
     version: VERSION,

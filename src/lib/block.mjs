@@ -1,4 +1,6 @@
 // The Longevo block in AGENTS.md: a few lines between two markers. Text outside the markers is never touched.
+import { fenceKinds } from './text.mjs';
+
 export const START = '<!-- longevo:start -->';
 export const END = '<!-- longevo:end -->';
 export const MAX_BLOCK_LINES = 12;
@@ -21,14 +23,8 @@ export function renderBlock({ commands = [], triggers = [], testingDoc = false, 
 // Markers inside a code fence are an example of the block, not the block.
 function markerLines(text) {
   const lines = text.split('\n');
-  let inFence = false;
-  const kept = lines.map((line) => {
-    if (/^\s*(```|~~~)/.test(line)) {
-      inFence = !inFence;
-      return null;
-    }
-    return inFence ? null : line.trim();
-  });
+  const kinds = fenceKinds(lines);
+  const kept = lines.map((line, index) => (kinds[index] ? null : line.trim()));
   const starts = kept.flatMap((line, index) => (line === START ? [index] : []));
   const ends = kept.flatMap((line, index) => (line === END ? [index] : []));
   return { lines, starts, ends };
@@ -60,7 +56,10 @@ export function writeBlock(text, lines) {
   const found = findBlock(text);
   if (found.start !== -1) {
     const cr = eol === '\r\n' ? '\r' : '';
-    return [...found.lines.slice(0, found.start), ...block.map((line) => `${line}${cr}`), ...found.lines.slice(found.end + 1)].join('\n');
+    // The end marker gets a carriage return only when a line follows it.
+    const last = found.end === found.lines.length - 1;
+    const written = block.map((line, index) => (index === block.length - 1 && last ? line : `${line}${cr}`));
+    return [...found.lines.slice(0, found.start), ...written, ...found.lines.slice(found.end + 1)].join('\n');
   }
   const gap = text.endsWith(`${eol}${eol}`) ? '' : text.endsWith(eol) ? eol : `${eol}${eol}`;
   return `${text}${gap}${block.join(eol)}${eol}`;

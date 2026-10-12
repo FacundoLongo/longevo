@@ -7,7 +7,8 @@ export const MAX_COMMIT_FILES = 100;
 
 export function commitsSince(sc, { range, since } = {}) {
   if (!sc.isGit) return [];
-  const args = ['-c', 'core.quotePath=false', 'log', '--no-merges', '--format=%x00%H', '--name-only'];
+  // Without rename detection a moved file shows under its old path too, so moving code out of covers counts.
+  const args = ['-c', 'core.quotePath=false', 'log', '--no-merges', '--no-renames', '--format=%x00%H', '--name-only'];
   if (since) args.push(`--since=${since}`);
   if (range) args.push(range);
   const out = git(sc.root, args);

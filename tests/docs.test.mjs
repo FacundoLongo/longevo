@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { livingDocs } from '../src/lib/docs.mjs';
 import { scope } from '../src/lib/repo.mjs';
 import { gitIn, makeRepo, writeFiles } from './helpers/fixture.mjs';
@@ -130,4 +131,49 @@ test('a new verified date that is not committed yet clears the doc', () => {
   const [doc] = docs(root).living;
   assert.equal(doc.stale, false);
   assert.equal(doc.verified, '2026-10-11');
+});
+
+// Commits only the given files, so an uncommitted doc stays uncommitted.
+const commitAt = (root, files, message, date) => {
+  writeFiles(root, files);
+  gitIn(root, 'add', ...Object.keys(files));
+  execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', message], { cwd: root, env: { ...process.env, GIT_AUTHOR_DATE: `${date}T12:00:00`, GIT_COMMITTER_DATE: `${date}T12:00:00` } });
+};
+
+test('covers that are not a glob or a list of globs are reported, not a crash', () => {
+  const root = makeRepo({ 'docs/a.md': '---\ncovers:\n  paths: src/**\nverified: 2026-01-01\n---\n# A\n', 'src/x.ts': '1' });
+  const result = docs(root);
+  assert.deepEqual(result.living, []);
+  assert.deepEqual(result.invalid.map((d) => d.path), ['docs/a.md']);
+  assert.match(result.invalid[0].error, /covers must be a glob or a list of globs/);
+});
+
+test('an uncommitted verified counts only when it is a real date later than the committed one', () => {
+  const root = makeRepo({ 'docs/pay.md': DOC, 'src/pay/a.ts': '1' });
+  commit(root, { 'src/pay/a.ts': '2' }, 'change pay');
+  for (const value of ['2026-09-01', 'tomorrow', '2026-10-01']) {
+    writeFiles(root, { 'docs/pay.md': DOC.replace('2026-10-01', value) });
+    assert.equal(docs(root).living[0].stale, true, value);
+  }
+});
+
+test('code committed after an uncommitted check still makes the doc stale', () => {
+  const root = makeRepo({ 'src/pay/a.ts': '1' }, { git: false });
+  gitIn(root, 'init', '-q');
+  commitAt(root, { 'docs/pay.md': DOC.replace('2026-10-01', '2026-01-01'), 'src/pay/a.ts': '1' }, 'doc', '2026-01-01');
+  commitAt(root, { 'src/pay/a.ts': '2' }, 'change pay', '2026-03-01');
+  writeFiles(root, { 'docs/pay.md': DOC.replace('2026-10-01', '2026-04-01') });
+  assert.equal(docs(root).living[0].stale, false);
+  commitAt(root, { 'src/pay/a.ts': '3' }, 'change pay again', '2026-05-01');
+  writeFiles(root, { 'docs/pay.md': DOC.replace('2026-10-01', '2026-04-01') });
+  const [doc] = docs(root).living;
+  assert.equal(doc.stale, true);
+  assert.deepEqual(doc.changed, ['src/pay/a.ts']);
+});
+
+test('a file moved out of covers makes the doc stale', () => {
+  const root = makeRepo({ 'docs/pay.md': DOC, 'src/pay/a.ts': 'export const fee = 1;\n'.repeat(20) });
+  gitIn(root, 'mv', 'src/pay/a.ts', 'src/billing.ts');
+  gitIn(root, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', 'move');
+  assert.deepEqual(docs(root).living[0].changed, ['src/pay/a.ts']);
 });

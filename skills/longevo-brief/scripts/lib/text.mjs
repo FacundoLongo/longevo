@@ -27,16 +27,35 @@ export function unreadableReason(path, maxBytes = 1_000_000) {
   }
 }
 
+// For each line: 'fence' for a line that opens or closes a code fence, 'code' inside one, or null. As in
+// CommonMark, a fence closes only on the same character, at least as long, with nothing after it.
+export function fenceKinds(lines) {
+  let open = null;
+  return lines.map((line) => {
+    const fence = line.match(/^\s*(`{3,}|~{3,})(.*)$/);
+    if (open) {
+      if (fence && fence[1][0] === open[0] && fence[1].length >= open.length && !fence[2].trim()) {
+        open = null;
+        return 'fence';
+      }
+      return 'code';
+    }
+    if (fence && !(fence[1][0] === '`' && fence[2].includes('`'))) {
+      open = fence[1];
+      return 'fence';
+    }
+    return null;
+  });
+}
+
 // Inline code spans and the lines of fenced code blocks, with their line numbers.
 export function codeSpans(text) {
   const spans = [];
-  let inFence = false;
-  text.split('\n').forEach((line, index) => {
-    if (/^\s*(```|~~~)/.test(line)) {
-      inFence = !inFence;
-      return;
-    }
-    if (inFence) {
+  const lines = text.split('\n');
+  const kinds = fenceKinds(lines);
+  lines.forEach((line, index) => {
+    if (kinds[index] === 'fence') return;
+    if (kinds[index] === 'code') {
       const trimmed = line.trim().replace(/^\$\s+/, '');
       if (trimmed) spans.push({ text: trimmed, line: index + 1, block: true });
       return;

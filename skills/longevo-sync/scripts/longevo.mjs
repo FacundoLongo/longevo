@@ -31,14 +31,17 @@ export function parseArgs(argv) {
 
 // Operations that take no input never read stdin, so an open empty pipe cannot fail or block them.
 const NO_INPUT = new Set(['gemini', 'sources', 'coverage']);
+// For these, no input is a normal call.
+const OPTIONAL_INPUT = new Set(['import']);
 
-function readStdin() {
+function readStdin(op) {
   try {
     return readFileSync(0, 'utf8');
   } catch (error) {
-    // A non-blocking pipe with nothing written yet: there is no input.
-    if (error.code === 'EAGAIN') return '';
-    throw error;
+    // A non-blocking pipe with nothing written yet: no input was given.
+    if (error.code !== 'EAGAIN') throw error;
+    if (OPTIONAL_INPUT.has(op)) return '';
+    throw new Error(`apply ${op} needs its input as JSON on stdin. Pass it with a heredoc.`);
   }
 }
 
@@ -52,7 +55,7 @@ export function run(argv) {
     return contextReport(args.cwd, { paths: args.paths.split(',').map((p) => p.trim()).filter(Boolean) });
   }
   if (args.command === 'apply') {
-    const raw = args.input ? readFileSync(args.input, 'utf8') : process.stdin.isTTY || NO_INPUT.has(args.rest[0]) ? '' : readStdin();
+    const raw = args.input ? readFileSync(args.input, 'utf8') : process.stdin.isTTY || NO_INPUT.has(args.rest[0]) ? '' : readStdin(args.rest[0]);
     let input = {};
     if (raw.trim()) {
       try {

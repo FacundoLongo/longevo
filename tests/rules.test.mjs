@@ -91,13 +91,18 @@ test('reads headings without a title or with an en dash, GitHub line anchors and
   assert.equal(second.test, 'keeps the fee');
 });
 
-test('a deeper subheading stays inside the rule; a heading at its level or above ends it', () => {
+test('a deeper subheading keeps the scenarios in the rule but not its fields; a heading at its level ends it', () => {
   const text = [
     '### R-PAY-003 · Refunds expire',
+    'Status: missing',
     '#### Scenarios',
     '- WHEN a refund is 49 hours old',
     '- THEN it is rejected',
-    'Status: missing',
+    '#### Appendix: test plan',
+    'Status: draft',
+    'Source: none',
+    '##### R-PAY-004 · Nested',
+    'Code: b.ts:2',
     '### Notes',
     'Status: implemented and tested',
     '',
@@ -105,4 +110,19 @@ test('a deeper subheading stays inside the rule; a heading at its level or above
   const [rule] = parseRules('docs/domain/pay.md', text);
   assert.equal(rule.scenarios, 1);
   assert.equal(rule.status, 'missing');
+  assert.equal(rule.source, null);
+  assert.deepEqual(rule.code, []);
+});
+
+test('apostrophes in an unquoted test name are part of the name; a quoted name wins over a backticked path', () => {
+  const text = [
+    '### R-PAY-005 · Late refunds',
+    "Test: doesn't refund when it's late",
+    '### R-PAY-006 · Fees',
+    'Test: `tests/fees.test.ts` "keeps the fee"',
+    '',
+  ].join('\n');
+  const [late, fees] = parseRules('docs/domain/pay.md', text);
+  assert.equal(late.test, "doesn't refund when it's late");
+  assert.equal(fees.test, 'keeps the fee');
 });

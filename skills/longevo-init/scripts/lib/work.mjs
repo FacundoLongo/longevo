@@ -8,7 +8,8 @@ export const BRIEF = /^docs\/work\/[^/]+\/brief\.md$/;
 export function briefs(sc, files) {
   return files.filter((file) => BRIEF.test(file)).sort().map((path) => {
     const { data } = parseFrontmatter(readText(join(sc.root, path)) ?? '');
-    const covers = Array.isArray(data.covers) ? data.covers : data.covers ? [data.covers] : [];
+    // Only globs count; covers written another way cover nothing.
+    const covers = typeof data.covers === 'string' ? [data.covers] : Array.isArray(data.covers) ? data.covers.filter((c) => typeof c === 'string') : [];
     return { path, status: data.status ?? 'open', task: data.task ?? null, covers };
   });
 }

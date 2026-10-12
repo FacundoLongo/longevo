@@ -60,27 +60,33 @@ function resolveBase(sc, base) {
 }
 
 // The added lines (with their new numbers) and the removed lines (with their old numbers) of each file in a
-// unified diff with no context. A "+++ " line is a file header only right after a "--- " line; inside a hunk it
-// is an added line that starts with "++". A deleted file is listed under its old path.
+// unified diff with no context. Inside a hunk every "+" or "-" line is content, even "+++ x" or "--- x"; the
+// "--- " and "+++ " file headers come only between "diff --git" and the first "@@". A deleted file is listed
+// under its old path.
 function changedLines(diff) {
   const byFile = new Map();
   let entry = null;
+  let inHunk = false;
   let oldLine = 0;
   let newLine = 0;
   let previous = '';
   for (const text of diff.split('\n')) {
-    if (text.startsWith('+++ ') && previous.startsWith('--- ')) {
+    if (text.startsWith('diff --git ')) {
+      inHunk = false;
+      entry = null;
+    } else if (!inHunk && text.startsWith('+++ ') && previous.startsWith('--- ')) {
       const file = text === '+++ /dev/null' ? previous.replace(/^--- a\//, '') : text.replace(/^\+\+\+ b\//, '');
       entry = { added: [], removed: [] };
       byFile.set(file, entry);
-    } else if (text.startsWith('@@')) {
+    } else if (entry && text.startsWith('@@')) {
       const [, from, to] = text.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)/) ?? [];
       oldLine = Number(from ?? 0);
       newLine = Number(to ?? 0);
-    } else if (entry && text.startsWith('+')) {
+      inHunk = true;
+    } else if (inHunk && text.startsWith('+')) {
       entry.added.push({ line: newLine, text: text.slice(1) });
       newLine += 1;
-    } else if (entry && text.startsWith('-') && !text.startsWith('--- ')) {
+    } else if (inHunk && text.startsWith('-')) {
       entry.removed.push({ line: oldLine, text: text.slice(1) });
       oldLine += 1;
     }
@@ -140,7 +146,10 @@ export function reviewReport(cwd, { base = null } = {}) {
   const docsToUpdate = living
     .filter((doc) => !touched.includes(doc.path))
     .map((doc) => ({ doc: doc.path, files: touched.filter((path) => matchesAny(path, doc.covers)) }))
-    .filter((entry) => entry.files.length > 0);
+    .filter((entry) => entry.files.length > 0)
+    // The newest commit under the doc's covers, the same one sync puts in its decline key; null when only
+    // uncommitted changes touch it.
+    .map((entry) => ({ ...entry, newest: (git(sc.root, ['log', '-1', '--format=%H', `${resolved.commit}..HEAD`, '--', ...entry.files]) ?? '').trim().slice(0, 12) || null }));
   const coveringDocs = new Set(living.filter((doc) => touched.some((path) => matchesAny(path, doc.covers))).map((doc) => doc.path));
   const rules = findRules(sc, files).filter((rule) => coveringDocs.has(rule.doc) || rule.code.some((ref) => touched.includes(ref.path)));
 

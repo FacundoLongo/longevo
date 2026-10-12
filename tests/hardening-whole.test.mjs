@@ -126,9 +126,12 @@ test('commits after an uncommitted check count by their dates, not by where git 
 
 test('pnpm, yarn and bun can run a package binary, so only missing scripts are flagged', async () => {
   const { scan } = await import('../src/scan.mjs');
-  const root = makeRepo({ 'AGENTS.md': '# A\n- `pnpm vitest run src/a.test.ts`\n- `yarn eslint .`\n- `bun tsc --noEmit`\n- `pnpm test`\n- `npm run lint`\n', 'package.json': '{"scripts":{}}' });
+  const root = makeRepo({
+    'AGENTS.md': '# A\n- `pnpm vitest run src/a.test.ts`\n- `yarn eslint .`\n- `bun tsc --noEmit`\n- `pnpm test`\n- `npm run lint`\n- `pnpm build`\n- `yarn dev`\n',
+    'package.json': '{"scripts":{},"devDependencies":{"vitest":"1","eslint":"9","typescript":"5"}}',
+  });
   const missing = scan(root, { home: root }).findings.filter((f) => f.id === 'missing-command').map((f) => f.name);
-  assert.deepEqual(missing.sort(), ['lint', 'test']);
+  assert.deepEqual(missing.sort(), ['build', 'dev', 'lint', 'test']);
 });
 
 test('apply refuses ops that need input when stdin is empty or closed, but import runs', () => {
@@ -156,7 +159,7 @@ test('a fenced example in a CRLF file stays an example', () => {
 test('an unclosed fence stops the block write', () => {
   const text = '# A\n\n```md\n<!-- longevo:start -->\n';
   const root = makeRepo({ 'AGENTS.md': text });
-  assert.throws(() => apply('block', root, {}), /ends inside a code fence/);
+  assert.throws(() => apply('block', root, { commands: [] }), /ends inside a code fence/);
   assert.equal(read(root, 'AGENTS.md'), text);
 });
 
@@ -233,4 +236,57 @@ test('review says why when it is not a git repo, or on the default branch, and g
   const report = reviewReport(root);
   assert.equal(report.base.fallback, 'on-default-branch');
   assert.equal(report.head, gitIn(root, 'rev-parse', 'HEAD').trim().slice(0, 12));
+});
+
+test('a removed SQL comment line is a removed line, not a file header', () => {
+  const root = makeRepo({ 'db/seed.sql': '-- seed data\npassword: hunter2hunter2\nselect 1;\n' });
+  gitIn(root, 'branch', '-M', 'main');
+  gitIn(root, 'checkout', '-q', '-b', 'clean');
+  writeFiles(root, { 'db/seed.sql': 'select 1;\n' });
+  gitIn(root, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qam', 'Clean the seed');
+  assert.deepEqual(reviewReport(root).security, [{ file: 'db/seed.sql', line: 2, kind: 'secret in yaml', removed: true }]);
+});
+
+test('a block before an unclosed fence is still updated in place', () => {
+  const text = '<!-- longevo:start -->\n## Longevo\n- old\n<!-- longevo:end -->\n\n## Examples\n```sh\nnpm test\n';
+  const root = makeRepo({ 'AGENTS.md': text });
+  assert.equal(apply('block', root, { commands: [] }).status, 'written');
+  assert.equal(read(root, 'AGENTS.md'), text.replace('- old', '- Start each session with the `longevo-init` skill.'));
+});
+
+test('a backticked name with a dot is a name, and stray backticks never stay in it', async () => {
+  const { parseRules } = await import('../src/lib/rules.mjs');
+  const [first, second] = parseRules('docs/domain/pay.md', '### R-PAY-1 · x\nTest: `refunds.test` expires\n### R-PAY-2 · y\nTest: `src/pay.test.ts`\n');
+  assert.equal(first.test, 'refunds.test');
+  assert.equal(second.test, 'src/pay.test.ts');
+});
+
+test('a dangling instruction link says to fix the link', async () => {
+  const { scan } = await import('../src/scan.mjs');
+  const { symlinkSync } = await import('node:fs');
+  const root = makeRepo({ 'AGENTS.md': '# Rules\n' });
+  symlinkSync('docs/gone.md', join(root, 'CLAUDE.md'));
+  const finding = scan(root, { home: root }).findings.find((f) => f.id === 'instruction-unreadable');
+  assert.match(finding.message, /fix or remove the link\.$/);
+});
+
+test('review gives each doc to update the newest commit under its covers, the same commit sync keys on', () => {
+  const root = makeRepo({ 'docs/pay.md': DOC, 'src/pay/a.ts': '1', 'README.md': '# R\n' });
+  gitIn(root, 'branch', '-M', 'main');
+  gitIn(root, 'checkout', '-q', '-b', 'change');
+  commit(root, { 'src/pay/a.ts': '2' }, 'change pay');
+  commit(root, { 'README.md': '# R2\n' }, 'unrelated');
+  const [entry] = reviewReport(root).docsToUpdate;
+  const [doc] = syncReport(root, { home: root }).docs;
+  assert.equal(entry.newest, doc.commits[0].hash);
+  writeFiles(root, { 'src/pay/a.ts': '3' });
+  assert.equal(reviewReport(root).docsToUpdate[0].newest, doc.commits[0].hash);
+});
+
+test('an explicit empty block input is refused; empty lists are a deliberate choice', () => {
+  const root = makeRepo({ 'AGENTS.md': '# A\n\n<!-- longevo:start -->\n## Longevo\n- Run all tests: `npm test`\n<!-- longevo:end -->\n' });
+  const before = read(root, 'AGENTS.md');
+  assert.throws(() => apply('block', root, {}), /no commands, triggers, testingDoc or coverageDoc/);
+  assert.equal(read(root, 'AGENTS.md'), before);
+  assert.equal(apply('block', root, { commands: [] }).status, 'written');
 });

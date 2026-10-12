@@ -21,11 +21,12 @@ const branch = () => {
 };
 
 test('reviews the branch against main, with untracked files', () => {
-  const report = reviewReport(branch());
+  const root = branch();
+  const report = reviewReport(root);
   assert.equal(report.base.ref, 'main');
   assert.match(report.base.commit, /^[0-9a-f]{40}$/);
   assert.deepEqual(report.changed.map((c) => c.path).sort(), ['src/refunds/policy.test.ts', 'src/refunds/policy.ts']);
-  assert.deepEqual(report.docsToUpdate, [{ doc: 'docs/domain/refunds.md', files: ['src/refunds/policy.test.ts', 'src/refunds/policy.ts'] }]);
+  assert.deepEqual(report.docsToUpdate, [{ doc: 'docs/domain/refunds.md', files: ['src/refunds/policy.test.ts', 'src/refunds/policy.ts'], newest: gitIn(root, 'rev-parse', 'HEAD').trim().slice(0, 12) }]);
   assert.deepEqual(report.rules.map((r) => r.id), ['R-REF-001']);
   assert.deepEqual(report.tests.map((t) => [t.file, t.mocksStorage, t.callAsserts]), [['src/refunds/policy.test.ts', true, 3]]);
   assert.deepEqual(report.code, ['src/refunds/policy.ts']);

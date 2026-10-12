@@ -2,8 +2,9 @@ import { join } from 'node:path';
 import { readText } from './text.mjs';
 
 const NPM = /^(npm|pnpm|yarn|bun)\s+(run\s+)?([\w:.-]+)/;
-// pnpm, yarn and bun run a package binary when no script has the name; test and start always mean a script.
-const SCRIPT_ALIASES = new Set(['test', 'start']);
+// pnpm, yarn and bun run a package binary when no script has the name, so a name that is a dependency (or a
+// known binary of one) is not a missing script.
+const BINARY_OF = { tsc: 'typescript', tsserver: 'typescript', playwright: '@playwright/test', ng: '@angular/cli', biome: '@biomejs/biome', changeset: '@changesets/cli' };
 const MAKE = /^(?:make|just)\s+([\w.-]+)/;
 const TOOL = /^(?:npx|pnpx|bunx|go|pytest|python3?|uv|poetry|tox|cargo|node|deno|vitest|jest|swift|xcodebuild|dotnet|mvn|\.\/mvnw|gradle|\.\/gradlew|rspec|bundle|rails|bin\/rails|rake|mix|php|composer|vendor\/bin\/(?:phpunit|pest)|flutter|dart|turbo|nx)\b/;
 const BUILTIN = new Set(['install', 'i', 'ci', 'add', 'remove', 'rm', 'exec', 'dlx', 'x', 'init', 'create', 'publish', 'update', 'upgrade', 'up', 'link', 'outdated', 'audit', 'why', 'run', 'login', 'version', 'help', 'dedupe', 'prune']);
@@ -16,6 +17,7 @@ export function realCommands(root, files) {
   const ci = [];
   const defined = {};
   const define = (key, file) => (defined[key] ??= []).push(file);
+  const dependencies = new Set();
   for (const file of files) {
     if (/(^|\/)node_modules\//.test(file)) continue;
     if (/(^|\/)package\.json$/.test(file)) {
@@ -24,6 +26,9 @@ export function realCommands(root, files) {
         for (const name of Object.keys(pkg.scripts ?? {})) {
           scripts.add(name);
           define(`script:${name}`, file);
+        }
+        for (const field of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies']) {
+          for (const name of Object.keys(pkg[field] ?? {})) dependencies.add(name);
         }
       } catch {
         // A broken package.json is reported by its own tools, not here.
@@ -37,7 +42,8 @@ export function realCommands(root, files) {
       for (const match of (readText(join(root, file)) ?? '').matchAll(/^\s*(?:-\s*)?run:\s*([^|>\s].*)$/gm)) ci.push(match[1].trim());
     }
   }
-  return { scripts: [...scripts].sort(), targets: [...targets].sort(), ci, defined };
+  const binaries = [...dependencies, ...Object.keys(BINARY_OF).filter((bin) => dependencies.has(BINARY_OF[bin]) || dependencies.has(bin))].sort();
+  return { scripts: [...scripts].sort(), targets: [...targets].sort(), ci, defined, binaries };
 }
 
 export function citedCommands(file, spans) {
@@ -52,12 +58,13 @@ export function citedCommands(file, spans) {
   return cited;
 }
 
-export function commandFindings(cited, real) {
+export function commandFindings(cited, real, { binaries = [] } = {}) {
   const findings = [];
   const scripts = new Set(real.scripts);
+  const packageBinaries = new Set(binaries);
   const targets = new Set(real.targets);
   for (const command of cited) {
-    const mustBeScript = command.runner === 'npm' || command.run || SCRIPT_ALIASES.has(command.name);
+    const mustBeScript = command.runner === 'npm' || command.run || !packageBinaries.has(command.name);
     const missingScript = command.kind === 'script' && mustBeScript && !BUILTIN.has(command.name) && !scripts.has(command.name);
     const missingTarget = command.kind === 'target' && !targets.has(command.name);
     if (missingScript || missingTarget) {

@@ -56,7 +56,7 @@ test('apply refuses a doc that links outside the repo', () => {
 test('a start marker without an end marker stops the write', () => {
   const text = '# Rules\n<!-- longevo:start -->\n## My rules\n- Use pnpm.\n- Never push to main.\n';
   const root = makeRepo({ 'AGENTS.md': text });
-  assert.throws(() => apply('block', root, {}), /marker/);
+  assert.throws(() => apply('block', root, { commands: [] }), /marker/);
   assert.equal(read(root, 'AGENTS.md'), text);
 });
 
@@ -64,7 +64,7 @@ test('markers mentioned inside a sentence are not a block', () => {
   const text = 'Longevo owns the text between `<!-- longevo:start -->` and `<!-- longevo:end -->`.\n';
   const root = makeRepo({ 'AGENTS.md': text });
   assert.equal(scan(root, { home: root }).block.exists, false);
-  apply('block', root, {});
+  apply('block', root, { commands: [] });
   const after = read(root, 'AGENTS.md');
   assert.ok(after.startsWith(text));
   assert.match(after, /\n<!-- longevo:start -->\n## Longevo\n/);
@@ -73,7 +73,7 @@ test('markers mentioned inside a sentence are not a block', () => {
 test('two blocks stop the write', () => {
   const block = '<!-- longevo:start -->\nx\n<!-- longevo:end -->\n';
   const root = makeRepo({ 'AGENTS.md': `${block}\n${block}` });
-  assert.throws(() => apply('block', root, {}), /more than one/);
+  assert.throws(() => apply('block', root, { commands: [] }), /more than one/);
 });
 
 test('a CLAUDE.md that links to AGENTS.md is one file for every agent', () => {

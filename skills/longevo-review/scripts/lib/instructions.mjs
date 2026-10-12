@@ -95,7 +95,8 @@ export function instructionFindings(inv, loads) {
   const claudeFiles = claude.filter((file) => base(file).startsWith('CLAUDE'));
   const hasAgents = loads.codex.length > 0;
   for (const file of inv.filter((f) => f.unreadable)) {
-    findings.push({ id: 'instruction-unreadable', severity: 'medium', evidence: [file.path], message: `Longevo could not read ${file.path}: ${file.unreadable}. Its rules were not checked; save it as UTF-8 text.` });
+    const fix = file.unreadable.includes('link') ? 'fix or remove the link' : 'save it as UTF-8 text';
+    findings.push({ id: 'instruction-unreadable', severity: 'medium', evidence: [file.path], message: `Longevo could not read ${file.path}: ${file.unreadable}. Its rules were not checked; ${fix}.` });
   }
   if (!claude.length && !hasAgents) {
     findings.push({ id: 'no-entry-file', severity: 'high', message: 'There is no AGENTS.md or CLAUDE.md in this folder or its parents.' });

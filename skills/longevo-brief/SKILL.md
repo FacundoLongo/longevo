@@ -61,7 +61,7 @@ If the user picks it:
    JSON
    ```
 
-   `covers` may name folders that do not exist yet, for code the task will add.
+   `covers` may name folders that do not exist yet, for code the task will add. Where heredocs do not work (PowerShell), write the JSON to a file and add `--input <file>`.
 
 2. Fill its sections with your edit tool, exactly as you showed them.
 3. Show the path.

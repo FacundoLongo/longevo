@@ -23,7 +23,7 @@ function parseCode(value) {
 // The test name: the first quoted or backticked part, so a line like `name` in tests/x.test.ts still works.
 // The test name: a double-quoted part, then a backticked part that is not a file path, then a single-quoted part
 // that no letter touches (so the apostrophes in "doesn't" stay in the name), then the whole line.
-const PATH_LIKE = /^[\w.@-]*\/[\w./@-]*\.\w+$|^[\w-]+(?:\.[\w-]+)*\.[a-z]{1,5}$/;
+const PATH_LIKE = /\/|\.(?:[cm]?[jt]sx?|py|go|rb|java|kt|cs|php|rs|swift|exs?|dart)$/;
 function parseTest(value) {
   const double = value.match(/"([^"]+)"/);
   if (double) return double[1].trim();
@@ -31,7 +31,7 @@ function parseTest(value) {
   if (backticked) return backticked;
   const single = value.match(/(?:^|[^\w])'([^']+)'(?=[^\w]|$)/);
   if (single) return single[1].trim();
-  return value.trim().replace(/^["'`]|["'`]$/g, '');
+  return value.replace(/`/g, '').trim().replace(/^["']|["']$/g, '');
 }
 
 export function parseRules(doc, text) {

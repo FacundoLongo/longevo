@@ -121,6 +121,10 @@ function checkGlob(files, glob) {
 }
 
 function block(sc, input) {
+  // An accidental {} would replace the user's block with an empty one; empty lists are a deliberate choice.
+  if (!['commands', 'triggers', 'testingDoc', 'coverageDoc'].some((key) => Object.hasOwn(input, key))) {
+    throw new Error('The block input has no commands, triggers, testingDoc or coverageDoc. Pass the lines the block should have.');
+  }
   const { commands = [], triggers = [], testingDoc = false, coverageDoc = false, creating = [] } = input;
   for (const [name, list] of Object.entries({ commands, triggers, creating })) {
     if (!Array.isArray(list)) throw new Error(`${name} must be a list.`);

@@ -28,7 +28,7 @@ Each one prints `{"op", "file", "status"}` with `written` or `unchanged`, or `{"
 
 | Change | Key |
 | --- | --- |
-| New verified date | `verify:<doc>:<first 12 characters of the newest commit in its commits>` |
+| New verified date | `verify:<doc>:<first 12 characters of the newest commit in its commits>`, or `verify:<doc>:none` for a first date (`doc-not-verified`) |
 | Text diff in a doc | `diff:<doc>:<first 40 characters of the changed line>` |
 | Rule change or new rule | `rule:<id>:<first 12 characters of the newest commit in its doc's commits, or none>` |
 | New checked date | `checked:<doc>:<url>:<this month, YYYY-MM>` |

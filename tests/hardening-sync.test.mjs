@@ -34,7 +34,7 @@ test('fixed write targets that link outside the repo are refused', () => {
   for (const [op, link] of cases) {
     const root = makeRepo({ 'src/a.ts': '1', 'docs-x/a.md': '---\nsources:\n  - url: https://a\n    checked: 2026-10-01\n---\n' });
     link(root);
-    assert.throws(() => apply(op, root, {}), /outside the repo/, op);
+    assert.throws(() => apply(op, root, op === 'block' ? { commands: [] } : {}), /outside the repo/, op);
   }
   assert.equal(read(join(out, 'shared.md')), '# Shared\n');
   assert.equal(read(join(out, 'settings.json')), '{"theme":"dark"}');

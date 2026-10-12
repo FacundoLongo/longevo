@@ -61,7 +61,7 @@ export function scan(cwd, { markSession = false, home = homedir() } = {}) {
   const ws = workspaces(sc.root, files);
   const docs = livingDocs(sc, files, generated);
   const hooks = findHooks(sc, scoped);
-  const { defined, ...commands } = realCommands(sc.root, scoped);
+  const { defined, binaries, ...commands } = realCommands(sc.root, scoped);
   const real = { ...commands, hooks: hooks.flatMap((hook) => hook.commands) };
   const cited = instructionFiles.flatMap((file) => citedCommands(file, codeSpans(texts[file])))
     .map((command) => ({ ...command, where: [...new Set(defined[`${command.kind}:${command.name}`] ?? [])].sort() }));
@@ -91,7 +91,7 @@ export function scan(cwd, { markSession = false, home = homedir() } = {}) {
       ...instructionFindings(instructionInventory, loads),
       ...unsharedRules(dirs, instructionInventory, texts, loads, inUse.length ? inUse : AGENTS, aliases),
       ...skillFindings(inUse, skills),
-      ...commandFindings(cited, real),
+      ...commandFindings(cited, real, { binaries }),
       ...docFindings(docs),
     ],
     missingPaths: instructionFiles.flatMap((file) => missingPaths(sc.root, file, citedPaths(codeSpans(texts[file])), files)),

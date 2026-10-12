@@ -57,7 +57,7 @@ test('replaces the block in place and sorts triggers', () => {
 
 test('creates AGENTS.md when there is none', () => {
   const root = makeRepo({ 'README.md': '# App\n' });
-  apply('block', root, {});
+  apply('block', root, { commands: [] });
   assert.equal(read(root, 'AGENTS.md'), '<!-- longevo:start -->\n## Longevo\n- Start each session with the `longevo-init` skill.\n<!-- longevo:end -->\n');
 });
 
@@ -212,10 +212,10 @@ test('marks a brief done', () => {
 
 test('block and import keep CRLF line endings', () => {
   const root = makeRepo({ 'AGENTS.md': '# Rules\r\n\r\n- Use pnpm.\r\n', 'CLAUDE.md': '# Claude\r\n' });
-  apply('block', root, {});
+  apply('block', root, { commands: [] });
   const agents = read(root, 'AGENTS.md');
   assert.equal(agents, '# Rules\r\n\r\n- Use pnpm.\r\n\r\n<!-- longevo:start -->\r\n## Longevo\r\n- Start each session with the `longevo-init` skill.\r\n<!-- longevo:end -->\r\n');
-  assert.equal(apply('block', root, {}).status, 'unchanged');
+  assert.equal(apply('block', root, { commands: [] }).status, 'unchanged');
   apply('import', root, {});
   assert.equal(read(root, 'CLAUDE.md'), '@AGENTS.md\r\n\r\n# Claude\r\n');
 });
@@ -223,11 +223,11 @@ test('block and import keep CRLF line endings', () => {
 test('markers inside a code fence are an example, not the block', () => {
   const example = '```markdown\n<!-- longevo:start -->\n## Longevo\n<!-- longevo:end -->\n```\n';
   const root = makeRepo({ 'AGENTS.md': `# Rules\n\n${example}` });
-  apply('block', root, {});
+  apply('block', root, { commands: [] });
   const text = read(root, 'AGENTS.md');
   assert.ok(text.startsWith(`# Rules\n\n${example}`), text);
   assert.ok(text.endsWith('<!-- longevo:start -->\n## Longevo\n- Start each session with the `longevo-init` skill.\n<!-- longevo:end -->\n'), text);
-  assert.equal(apply('block', root, {}).status, 'unchanged');
+  assert.equal(apply('block', root, { commands: [] }).status, 'unchanged');
 });
 
 test('checked keeps comment lines and other items of the sources list', () => {
@@ -266,12 +266,12 @@ test('a bare source URL keeps its comment when it gets a checked date', () => {
 test('a fence closes only on a matching fence, so markers after it are the block', () => {
   const text = '# Rules\n\n~~~text\n```\n~~~\n\n<!-- longevo:start -->\n## Longevo\n- Start each session with the `longevo-init` skill.\n<!-- longevo:end -->\n';
   const root = makeRepo({ 'AGENTS.md': text });
-  assert.equal(apply('block', root, {}).status, 'unchanged');
+  assert.equal(apply('block', root, { commands: [] }).status, 'unchanged');
   assert.equal(read(root, 'AGENTS.md'), text);
 });
 
 test('a CRLF file whose end marker is the last line gets no stray carriage return', () => {
   const root = makeRepo({ 'AGENTS.md': '# A\r\n<!-- longevo:start -->\r\nold\r\n<!-- longevo:end -->' });
-  apply('block', root, {});
+  apply('block', root, { commands: [] });
   assert.equal(read(root, 'AGENTS.md'), '# A\r\n<!-- longevo:start -->\r\n## Longevo\r\n- Start each session with the `longevo-init` skill.\r\n<!-- longevo:end -->');
 });

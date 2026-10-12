@@ -47,7 +47,7 @@ Only doc changes go in the numbered list:
 - `verify` for a doc that is still true;
 - `done` for the brief, when every acceptance criterion has a test.
 
-Each item has the file, one line on why, the diff and a key: `diff:<doc>:<first 40 characters of the changed line>`, `verify:<doc>:<head>` (the `head` from the report, so a decline lasts until new commits) or `done:<brief>`. Leave out any item whose key is in `declined`, and if any were left out, say so in one line: "N changes are hidden because you declined them. Say 'show declined' to see them again." When the user says that, run `apply undecline` with `{"all": true}` and build the list again. If the list is empty, end with the report. Otherwise end with:
+Each item has the file, one line on why, the diff and a key: `diff:<doc>:<first 40 characters of the changed line>`, `verify:<doc>:<newest>` (the doc's `newest` in `docsToUpdate`, or `none`; the same key sync uses, so a decline lasts until the code under the doc changes again) or `done:<brief>`. Leave out any item whose key is in `declined`, and if any were left out, say so in one line: "N changes are hidden because you declined them. Say 'show declined' to see them again." When the user says that, run `apply undecline` with `{"all": true}` and build the list again. If the list is empty, end with the report. Otherwise end with:
 
 > Which ones do I apply? [All / Pick numbers / None]
 
@@ -59,7 +59,7 @@ node <this skill's folder>/scripts/longevo.mjs apply verify --cwd . <<'JSON'
 JSON
 ```
 
-`done` takes `{"doc": "<the brief's path>"}`. Run `apply decline` with `{"keys": [...]}` for the rest. Then show `git status --short`, so new files show too, and `git diff --stat`. Never stage or commit.
+`done` takes `{"doc": "<the brief's path>"}`. Where heredocs do not work (PowerShell), write the JSON to a file and add `--input <file>`. Run `apply decline` with `{"keys": [...]}` for the rest. Then show `git status --short`, so new files show too, and `git diff --stat`. Never stage or commit.
 
 ## Rules
 

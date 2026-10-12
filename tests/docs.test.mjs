@@ -10,6 +10,12 @@ const commit = (root, files, message) => {
   gitIn(root, 'add', '-A');
   gitIn(root, 'commit', '-q', '-m', message);
 };
+// Commits only the given files, so an uncommitted doc stays uncommitted.
+const commitAt = (root, files, message, date) => {
+  writeFiles(root, files);
+  gitIn(root, 'add', ...Object.keys(files));
+  execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', message], { cwd: root, env: { ...process.env, GIT_AUTHOR_DATE: `${date}T12:00:00`, GIT_COMMITTER_DATE: `${date}T12:00:00` } });
+};
 const listed = (root) => gitIn(root, 'ls-files').split('\n').filter(Boolean);
 const docs = (root) => livingDocs(scope(root), listed(root), new Set());
 const DOC = '---\ncovers: ["src/pay/**"]\nverified: 2026-10-01\n---\n# Pay\n';
@@ -123,8 +129,10 @@ test('a change that was later reverted does not make a doc stale', () => {
 });
 
 test('a new verified date that is not committed yet clears the doc', () => {
-  const root = makeRepo({ 'docs/pay.md': DOC, 'src/pay/a.ts': '1' });
-  commit(root, { 'src/pay/a.ts': '2' }, 'change pay');
+  const root = makeRepo({ 'src/pay/a.ts': '1' }, { git: false });
+  gitIn(root, 'init', '-q');
+  commitAt(root, { 'docs/pay.md': DOC, 'src/pay/a.ts': '1' }, 'doc', '2026-10-01');
+  commitAt(root, { 'src/pay/a.ts': '2' }, 'change pay', '2026-10-05');
   writeFiles(root, { 'docs/pay.md': DOC.replace('# Pay', '# Payments') });
   assert.equal(docs(root).living[0].stale, true);
   writeFiles(root, { 'docs/pay.md': DOC.replace('2026-10-01', '2026-10-11') });
@@ -133,12 +141,6 @@ test('a new verified date that is not committed yet clears the doc', () => {
   assert.equal(doc.verified, '2026-10-11');
 });
 
-// Commits only the given files, so an uncommitted doc stays uncommitted.
-const commitAt = (root, files, message, date) => {
-  writeFiles(root, files);
-  gitIn(root, 'add', ...Object.keys(files));
-  execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', message], { cwd: root, env: { ...process.env, GIT_AUTHOR_DATE: `${date}T12:00:00`, GIT_COMMITTER_DATE: `${date}T12:00:00` } });
-};
 
 test('covers that are not a glob or a list of globs are reported, not a crash', () => {
   const root = makeRepo({ 'docs/a.md': '---\ncovers:\n  paths: src/**\nverified: 2026-01-01\n---\n# A\n', 'src/x.ts': '1' });

@@ -31,6 +31,19 @@ We use Primo's method:
 4. Fix the skill and repeat until the result is better than the original.
 5. Then track real work for 2 to 4 weeks: integration tests, tests with mocks, tests with mocked storage (goal: 0) and tests you had to fix.
 
+## Gate results on real repos
+
+Measured in October 2026 on copies of two of the maintainer's repos. To compare tests, we planted the same bugs (mutants) in the code and counted how many each suite catches, running the whole suite.
+
+| Gate | Repo | Result |
+| --- | --- | --- |
+| 1 | Go service | Three suites written again without the originals: they catch 16 of 16 mutants, the originals 10. They also found two bugs the originals missed |
+| 1 | TypeScript monorepo | Three suites written again: they catch 16 of 17 mutants, the originals 11. The one they miss is an edge case left out on purpose, with its reason |
+| 2 | TypeScript monorepo | After `init`, all five agents load the same rules. The run found four problems, fixed in 0.2.1 |
+| 3 | TypeScript monorepo | Five docs verified on an old commit, then 14 real commits: the 3 docs marked stale were wrong somewhere, every fix `sync` proposed matched the code, and it found a billing bug |
+| 3 | MCP sources | Not measured yet |
+| 4 | | Needs a real task, and the 2 to 4 weeks of tracking above |
+
 ## Open decisions
 
 | Decision | Options | We lean to |

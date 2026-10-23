@@ -107,6 +107,23 @@ test('ignores a CLAUDE.md that only imports AGENTS.md', () => {
   assert.ok(!report.findings.some((f) => f.id === 'rules-not-shared'));
 });
 
+test('lines left in a CLAUDE.md that imports AGENTS.md are Claude Code rules, low severity', () => {
+  const root = makeRepo({ 'AGENTS.md': '# Rules\n- Use pnpm\n', 'CLAUDE.md': '@AGENTS.md\n\n- Add a Co-Authored-By trailer for Claude.\n' });
+  const report = scan(root, { home: newHome({ '.claude/x': '', '.codex/x': '' }) });
+  const finding = report.findings.find((f) => f.id === 'rules-not-shared');
+  assert.equal(finding.severity, 'low');
+  assert.match(finding.message, /only Claude Code loads/);
+});
+
+test('CLAUDE.md is too long when it and the AGENTS.md it imports pass 200 lines', () => {
+  const rules = Array.from({ length: 190 }, (_, i) => `- Rule ${i}`).join('\n');
+  const root = makeRepo({ 'AGENTS.md': `# Rules\n${rules}\n`, 'CLAUDE.md': '@AGENTS.md\n\n- Claude only\n- Another\n- And one more\n- Four\n- Five\n- Six\n- Seven\n- Eight\n- Nine\n- Ten\n' });
+  const report = scan(root, { home: newHome({ '.claude/x': '' }) });
+  const finding = report.findings.find((f) => f.id === 'claude-md-too-long');
+  assert.ok(finding, JSON.stringify(ids(report)));
+  assert.deepEqual(finding.evidence, ['CLAUDE.md', 'AGENTS.md']);
+});
+
 test('does not count nested instruction files as unshared when run from the root', () => {
   const root = makeRepo({ 'AGENTS.md': '# Rules\n- a\n', 'packages/a/AGENTS.md': '# A\n- b\n' });
   const report = scan(root, { home: newHome({ '.claude/x': '' }) });

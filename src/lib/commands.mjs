@@ -5,6 +5,8 @@ const NPM = /^(npm|pnpm|yarn|bun)\s+(run\s+)?([\w:.-]+)/;
 // pnpm, yarn and bun run a package binary when no script has the name, so a name that is a dependency (or a
 // known binary of one) is not a missing script.
 const BINARY_OF = { tsc: 'typescript', tsserver: 'typescript', playwright: '@playwright/test', ng: '@angular/cli', biome: '@biomejs/biome', changeset: '@changesets/cli' };
+// `bun test`, `bun build` and the like run Bun itself, even when a script has the same name.
+const BUN_OWN = new Set(['test', 'build', 'pm', 'repl', 'patch', 'info', 'unlink']);
 const MAKE = /^(?:make|just)\s+([\w.-]+)/;
 const TOOL = /^(?:npx|pnpx|bunx|go|pytest|python3?|uv|poetry|tox|cargo|node|deno|vitest|jest|swift|xcodebuild|dotnet|mvn|\.\/mvnw|gradle|\.\/gradlew|rspec|bundle|rails|bin\/rails|rake|mix|php|composer|vendor\/bin\/(?:phpunit|pest)|flutter|dart|turbo|nx)\b/;
 const BUILTIN = new Set(['install', 'i', 'ci', 'add', 'remove', 'rm', 'exec', 'dlx', 'x', 'init', 'create', 'publish', 'update', 'upgrade', 'up', 'link', 'outdated', 'audit', 'why', 'run', 'login', 'version', 'help', 'dedupe', 'prune']);
@@ -51,9 +53,10 @@ export function citedCommands(file, spans) {
   for (const span of spans) {
     const npm = span.text.match(NPM);
     const make = span.text.match(MAKE);
-    if (npm) cited.push({ file, line: span.line, text: span.text, kind: 'script', name: npm[3], runner: npm[1], run: Boolean(npm[2]) });
+    const bun = npm && npm[1] === 'bun' && !npm[2] && BUN_OWN.has(npm[3]);
+    if (npm && !bun) cited.push({ file, line: span.line, text: span.text, kind: 'script', name: npm[3], runner: npm[1], run: Boolean(npm[2]) });
     else if (make) cited.push({ file, line: span.line, text: span.text, kind: 'target', name: make[1] });
-    else if (TOOL.test(span.text)) cited.push({ file, line: span.line, text: span.text, kind: 'tool', name: span.text.split(/\s+/)[0] });
+    else if (bun || TOOL.test(span.text)) cited.push({ file, line: span.line, text: span.text, kind: 'tool', name: span.text.split(/\s+/)[0] });
   }
   return cited;
 }

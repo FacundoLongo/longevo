@@ -45,7 +45,7 @@ Then show a numbered list of changes. Each item has the file, one line on why, t
 - **`@AGENTS.md`** in CLAUDE.md for `claude-sees-only-claude-md`, and for `only-claude-md` when the block creates AGENTS.md, so Claude Code reads it too.
 - **The Gemini setting** when `gemini` is in `agents.inUse` and AGENTS.md is not in `instructions.loads.gemini`.
 - **`docs/testing.md`** from [references/testing-template.md](references/testing-template.md) when it does not exist.
-- **Frontmatter** for at most 5 docs from `docs.candidates`, starting with the areas in `hotspots.areas`. Propose only `covers` you can justify from the doc and the code.
+- **Frontmatter** for at most 5 docs from `docs.candidates`, starting with the areas in `hotspots.areas`. Propose only `covers` you can justify from the doc and the code. Read each doc against that code: a true doc gets today as `verified`; a doc that is already wrong gets `verified: false` and a line saying so, and `longevo-sync` fixes it and gives it its first date.
 - **The block** when it is missing or different from what it should say. Show its lines exactly as the engine writes them (see [references/apply.md](references/apply.md)). If `block.error` is set (two blocks, a marker without its pair, or an open code fence), report it and leave the block out of the list.
 - **`docs/coverage.md`** when `coverage.upToDate` is false.
 
@@ -55,7 +55,7 @@ End with this question, and nothing after it:
 
 ## 6. Apply
 
-Apply only the picked items, in the order in [references/apply.md](references/apply.md): prose changes with your edit tool, exactly as the diff you showed; structured changes with `longevo.mjs apply`. Record the items not picked with `apply decline`. If an apply command returns an error, show it and stop; do not retry with other input without asking.
+Apply only the picked items, in the order in [references/apply.md](references/apply.md): prose changes with your edit tool, exactly as the diff you showed; structured changes with `longevo.mjs apply`. Record the items not picked with `apply decline`, if any. If an apply command returns an error, show it and stop; do not retry with other input without asking.
 
 Then show `git status --short`, so new files show too, and `git diff --stat`. Never stage or commit.
 

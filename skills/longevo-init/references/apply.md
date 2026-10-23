@@ -8,7 +8,7 @@ Pass the input as JSON on stdin with a heredoc, from the folder you scanned. Whe
 
 ```bash
 node <this skill's folder>/scripts/longevo.mjs apply block --cwd . <<'JSON'
-{"commands": [{"label": "Run all tests", "command": "pnpm test"}], "testingDoc": true, "creating": ["docs/testing.md"]}
+{"commands": [{"label": "Run all tests", "command": "pnpm test"}], "testingDoc": true, "coverageDoc": true, "creating": ["docs/testing.md", "docs/coverage.md"]}
 JSON
 ```
 
@@ -17,7 +17,7 @@ JSON
 | `block` | `commands` [{`label`, `command`}], `triggers` [{`glob`, `doc`}], `testingDoc`, `coverageDoc`, `creating` | The block in this folder's AGENTS.md. It creates AGENTS.md if there is none |
 | `import` | `file` (optional) | `@AGENTS.md` as the first line of CLAUDE.md, or `@../AGENTS.md` in `.claude/CLAUDE.md` |
 | `gemini` | none | Adds AGENTS.md to `context.fileName` in `.gemini/settings.json` |
-| `frontmatter` | `doc`, `covers`, `verified` (optional, today by default) | `covers` and `verified` in the doc's frontmatter |
+| `frontmatter` | `doc`, `covers`, `verified` (optional: today by default, or `false` for a doc that is not true yet) | `covers` and `verified` in the doc's frontmatter; only `covers` with `verified: false` |
 | `coverage` | none | `docs/coverage.md` |
 | `decline` | `keys` | The keys of changes the user did not pick, inside `.git` |
 | `undecline` | `keys`, or `all: true` | Forgets declined changes, so they can be proposed again |
@@ -34,11 +34,11 @@ Each one prints `{"op", "file", "status"}` with `written` or `unchanged`, or `{"
 | `docs/testing.md` | `testing-doc` |
 | Frontmatter | `frontmatter:<doc>` |
 | Coverage record | `coverage:<coverage.hash>`, so a decline lasts until the record changes |
-| Rule move | `move:<source file>:<first 40 characters of the rule>` |
+| Rule move | `move:<source file>:<first 40 characters of the rule, or of the section heading>` |
 
 ## The block
 
-- Lines, in this order: commands, the testing doc, one trigger per living doc, the coverage record, the session line. The engine adds the heading and the session line. It writes them like this:
+- Lines, in this order: commands, the testing doc, one trigger per living doc (sorted by glob), the coverage record, the session line. The engine adds the heading and the session line, and sorts the triggers. It writes them like this:
 
 ```markdown
 <!-- longevo:start -->
@@ -60,15 +60,16 @@ Each one prints `{"op", "file", "status"}` with `written` or `unchanged`, or `{"
 ## Rule moves
 
 - Move a rule only when AGENTS.md does not say it already. Keep the wording.
+- A long file gives one item per section, keyed by its heading, not one item per rule.
 - When two files disagree (npm against pnpm), keep the one the repo shows (here, the lockfile) and say why in the item. Ask before the list only when nothing in the repo settles it.
-- Remove the moved lines from the source file in the same change. If the source file has no rules left, the change deletes it, except CLAUDE.md: keep it with only `@AGENTS.md`, so Claude Code sessions that do not read AGENTS.md by themselves still load it.
+- Remove the moved lines from the source file in the same change. If the source file has no rules left, the change deletes it, except CLAUDE.md: the change leaves it with only `@AGENTS.md`, shown in its diff, so Claude Code sessions that do not read AGENTS.md by themselves still load it. Then leave the separate `import` item out.
 - Leave rules that only make sense for one agent, like a Claude Code tool setting, and say why.
 
 ## Order
 
 1. Prose: rule moves, then `docs/testing.md`.
 2. `frontmatter`, one call per doc. For `docs/testing.md`, `covers` points at the test setup (config and helpers), not at the tests; show that frontmatter in the `testing-doc` item's diff, because it is part of that change.
-3. `block`. List the docs created in this run in `creating`.
+3. `block`. List the docs this run creates in `creating`, including `docs/coverage.md` when the coverage item was picked.
 4. `import`, then `gemini`.
 5. `coverage`, last, so it sees the new docs.
 6. `decline`, with the keys of every item the user did not pick.

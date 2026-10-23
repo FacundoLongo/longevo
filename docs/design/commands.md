@@ -1,6 +1,6 @@
 ---
 covers: ["skills/*/SKILL.md", "src/lib/apply.mjs", "src/lib/block.mjs"]
-verified: 2026-10-12
+verified: 2026-10-23
 ---
 
 # Commands
@@ -47,7 +47,7 @@ Only the changes you pick from the list:
 - the Longevo block in AGENTS.md, between `<!-- longevo:start -->` and `<!-- longevo:end -->`,
 - the `@AGENTS.md` line at the top of CLAUDE.md,
 - `context.fileName` in `.gemini/settings.json`, so Gemini CLI reads AGENTS.md, when the repo or your home folder has a Gemini setup,
-- `covers` and `verified` in the frontmatter of existing docs,
+- `covers` and `verified` in the frontmatter of existing docs (only `covers` for a doc that is already wrong, so `sync` checks it),
 - `docs/testing.md` and `docs/coverage.md`,
 - prose diffs it showed you, like moving a rule from CLAUDE.md or `.cursor/rules` to AGENTS.md.
 

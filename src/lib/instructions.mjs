@@ -16,6 +16,8 @@ const PATTERNS = [
   /(^|\/)\.github\/instructions\/.+\.instructions\.md$/,
 ];
 
+export const isInstructionFile = (file) => PATTERNS.some((pattern) => pattern.test(file));
+
 const base = (file) => file.split('/').pop();
 
 // An @AGENTS.md import in CLAUDE.md, also written as @./AGENTS.md or @../AGENTS.md.
@@ -47,7 +49,7 @@ function rawSize(root, path, text) {
 export function findInstructionFiles(files, dirs) {
   const scopeDir = dirs[dirs.length - 1];
   return files
-    .filter((file) => PATTERNS.some((pattern) => pattern.test(file)))
+    .filter(isInstructionFile)
     .filter((file) => {
       const owner = ownerDir(file);
       return dirs.includes(owner) || scopeDir === '' || owner === scopeDir || owner.startsWith(`${scopeDir}/`);
@@ -113,8 +115,15 @@ export function instructionFindings(inv, loads) {
     findings.push({ id: 'only-claude-md', severity: 'medium', evidence: claudeFiles, message: 'The rules live only in CLAUDE.md. Codex, Cursor and Gemini CLI do not load it.' });
   }
   for (const file of inv) {
-    if (base(file.path) === 'CLAUDE.md' && file.lines > 200) {
-      findings.push({ id: 'claude-md-too-long', severity: 'medium', evidence: [file.path], message: `${file.path} has ${file.lines} lines. Claude Code recommends fewer than 200.` });
+    // Claude Code loads an imported AGENTS.md together with CLAUDE.md, so both count.
+    const agentsPath = dirOf(file.path) ? `${dirOf(file.path)}/AGENTS.md` : 'AGENTS.md';
+    const imported = base(file.path) === 'CLAUDE.md' && claude.includes(agentsPath) ? inv.find((f) => f.path === agentsPath) : null;
+    const loaded = file.lines + (imported?.lines ?? 0);
+    if (base(file.path) === 'CLAUDE.md' && loaded > 200) {
+      const message = imported
+        ? `${file.path} and the ${agentsPath} it imports have ${loaded} lines. Claude Code loads both and recommends fewer than 200.`
+        : `${file.path} has ${file.lines} lines. Claude Code recommends fewer than 200.`;
+      findings.push({ id: 'claude-md-too-long', severity: 'medium', evidence: imported ? [file.path, agentsPath] : [file.path], message });
     }
     if (file.commits === 1) {
       findings.push({ id: 'never-reviewed', severity: 'low', evidence: [file.path], message: `${file.path} has a single commit, so nobody changed it after it was written.` });
@@ -147,12 +156,16 @@ export function unsharedRules(dirs, inv, texts, loads, inUse, aliases = new Map(
     members.forEach((member) => reported.add(member));
     const missing = inUse.filter((agent) => !members.some((member) => loads[agent].includes(member)));
     if (missing.length) {
+      // What stays in a CLAUDE.md that imports AGENTS.md is meant for Claude Code alone.
+      const claudeOnly = base(path) === 'CLAUDE.md' && IMPORTS_AGENTS.test(prose(texts[path] ?? ''));
       findings.push({
         id: 'rules-not-shared',
-        severity: 'high',
+        severity: claudeOnly ? 'low' : 'high',
         evidence: [path],
         agents: missing,
-        message: `${path} has rules that ${missing.join(', ')} ${missing.length === 1 ? 'does' : 'do'} not load.`,
+        message: claudeOnly
+          ? `${path} has lines besides @AGENTS.md that only Claude Code loads. Keep only rules about Claude Code there.`
+          : `${path} has rules that ${missing.join(', ')} ${missing.length === 1 ? 'does' : 'do'} not load.`,
       });
     }
   }

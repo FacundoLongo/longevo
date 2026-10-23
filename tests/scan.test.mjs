@@ -46,6 +46,16 @@ test('flags a cited npm script that does not exist', () => {
   assert.deepEqual(missing, ['lint']);
 });
 
+test('bun test and bun build are Bun commands, not package.json scripts', () => {
+  const root = makeRepo({
+    'package.json': JSON.stringify({ scripts: { lint: 'biome check .' } }),
+    'AGENTS.md': 'Run `bun test` and `bun build ./src/index.ts`. Check with `bun run typecheck`.\n',
+  });
+  const report = scan(root);
+  assert.deepEqual(report.findings.filter((f) => f.id === 'missing-command').map((f) => f.name), ['typecheck']);
+  assert.deepEqual(report.commands.cited.filter((c) => c.text.startsWith('bun test')).map((c) => [c.kind, c.where]), [['tool', []]]);
+});
+
 test('flags a missing single-test command', () => {
   const pkg = JSON.stringify({ scripts: { test: 'vitest run' } });
   const without = makeRepo({ 'package.json': pkg, 'AGENTS.md': 'Run `npm test` before you push.\n' });

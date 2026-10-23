@@ -5,6 +5,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-23
+
+### Changed
+
+- `apply frontmatter` takes `verified: false` for a doc that is not true yet. It writes only `covers`, and `longevo-sync` checks the doc and gives it its first date.
+- `init` reads each doc against its code before it proposes frontmatter, and proposes one rule move per section of a long file.
+- `sync` judges every claim in a stale doc, also the ones older than its last check, and never installs dependencies or runs the tests to check a claim.
+
+### Fixed
+
+- `init` proposes frontmatter for docs outside `docs/`, like `context/*.md` or a package README.
+- `bun test` and `bun build` are Bun commands, not missing package.json scripts.
+- Lines left in a CLAUDE.md that imports AGENTS.md are reported as Claude Code rules, at low severity, so they do not come back in every session update.
+- The CLAUDE.md size check counts the AGENTS.md it imports, because Claude Code loads both.
+- `init` lists `docs/coverage.md` in the block's `creating` when the same run creates it. Before, the block failed.
+- The `init` report ends with the list of changes and its question; "Not checked" comes before them.
+
 ## [0.2.0] - 2026-10-12
 
 ### Added
@@ -48,6 +65,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 - Contributing guide with rules for commit messages and this changelog.
 - MIT license.
 
-[Unreleased]: https://github.com/FacundoLongo/longevo/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/FacundoLongo/longevo/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/FacundoLongo/longevo/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/FacundoLongo/longevo/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/FacundoLongo/longevo/releases/tag/v0.1.0

@@ -6,6 +6,7 @@ import { parseFrontmatter } from './frontmatter.mjs';
 import { matches, matchesAny } from './glob.mjs';
 import { realDate } from './dates.mjs';
 import { commitsSince } from './hotspots.mjs';
+import { isInstructionFile } from './instructions.mjs';
 import { git } from './repo.mjs';
 import { readText } from './text.mjs';
 
@@ -13,6 +14,8 @@ const MARKDOWN = /\.mdx?$/;
 const RECORD = /(^|\/)(decisions|adr|adrs|work|rfc|rfcs)\//i;
 const GENERATED_DOC = /(^|\/)docs\/(coverage|sources)\.md$/;
 const LONGEVO_KEY = /^(covers|verified)\s*[:=]/m;
+// Files that are never docs to cover: anything in a dot folder or vendored code, skills and community files.
+const NOT_A_DOC = /(^|\/)(?:\.[^/]+|node_modules|vendor|third_party)\/|(^|\/)SKILL\.md$|(^|\/)(?:CHANGELOG|HISTORY|LICEN[CS]E|COPYING|CODE_OF_CONDUCT|SECURITY)\b[^/]*$/i;
 const countLines = (text) => text.replace(/\n$/, '').split('\n').length;
 const globs = (value) => (typeof value === 'string' && value ? [value] : Array.isArray(value) && value.length && value.every((v) => typeof v === 'string') ? value : null);
 
@@ -85,11 +88,13 @@ export function livingDocs(sc, files, generated, { drift = true } = {}) {
       const changed = anchor ? changedSince(sc, anchor, covers, generated, walks, { since: fresh ? data.verified : null }) : [];
       const unmatched = covers.filter((pattern) => !files.some((file) => matches(file, pattern)));
       living.push({ path, covers, verified: data.verified ?? null, anchor, stale: changed.length > 0, changed, unmatched });
-    } else if (/(^|\/)docs\//.test(path) && !RECORD.test(path) && !GENERATED_DOC.test(path) && !/(^|\/)CHANGELOG/i.test(path)) {
+    } else if (!RECORD.test(path) && !GENERATED_DOC.test(path) && !NOT_A_DOC.test(path) && !isInstructionFile(path)) {
       candidates.push({ path, lines: countLines(text) });
     }
   }
-  return { living, invalid, candidates: candidates.slice(0, 50) };
+  // Docs in a docs/ folder first, so a repo with many READMEs still lists them.
+  const inDocs = (candidate) => (/(^|\/)docs\//.test(candidate.path) ? 0 : 1);
+  return { living, invalid, candidates: candidates.sort((a, b) => inDocs(a) - inDocs(b)).slice(0, 50) };
 }
 
 export function docFindings(docs) {

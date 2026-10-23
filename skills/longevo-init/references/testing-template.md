@@ -1,6 +1,6 @@
 # Testing template
 
-Use it to propose `docs/testing.md`. Fill it from the scan, the repo and the user's answers. Leave out a section with nothing true to say, and keep the file under 60 lines. Write the file without frontmatter; `apply frontmatter` adds it afterwards (see [apply.md](apply.md)).
+Use it to propose `docs/testing.md`. Fill it from the scan, the repo and the user's answers, in the language of the repo's docs. Leave out a section with nothing true to say, and keep the file under 60 lines. Write the file without frontmatter; `apply frontmatter` adds it afterwards (see [apply.md](apply.md)).
 
 ```markdown
 # Testing
@@ -34,4 +34,4 @@ Copy these when you write a new test:
 - <Rules about tests that already exist in this repo. Link to them; do not copy them.>
 ```
 
-Golden and "do not copy" tests need the user's OK: propose them from the test inventory and the anti-golden candidates you confirmed, and ask before you list them.
+Golden and "do not copy" tests need the user's OK, because the code cannot tell which tests the team wants copied: propose them from the test inventory and the anti-golden candidates you confirmed, and ask before you list them.

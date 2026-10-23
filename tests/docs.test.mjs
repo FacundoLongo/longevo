@@ -88,6 +88,23 @@ test('lists docs that could get frontmatter, without records or generated docs',
   assert.deepEqual(docs(root).candidates, [{ path: 'docs/api.md', lines: 1 }]);
 });
 
+test('docs outside docs/ are candidates too, after the ones in docs/', () => {
+  const root = makeRepo({
+    'docs/api.md': '# API\n',
+    'context/architecture.md': '# Architecture\n',
+    'apps/api/README.md': '# API app\n',
+    'README.md': '# Shop\n',
+    'AGENTS.md': '# Rules\n',
+    'packages/web/CLAUDE.md': '# Rules\n',
+    '.github/PULL_REQUEST_TEMPLATE.md': '# PR\n',
+    'skills/pay/SKILL.md': '# Skill\n',
+    'LICENSE.md': 'MIT\n',
+    'vendor/lib/README.md': '# Lib\n',
+    'adr/0001-use-postgres.md': '# ADR\n',
+  });
+  assert.deepEqual(docs(root).candidates.map((c) => c.path), ['docs/api.md', 'README.md', 'apps/api/README.md', 'context/architecture.md']);
+});
+
 test('the scan reports stale docs and their candidates', async () => {
   const { scan } = await import('../src/scan.mjs');
   const root = makeRepo({ 'docs/pay.md': DOC, 'docs/api.md': '# API\n', 'src/pay/a.ts': '1' });

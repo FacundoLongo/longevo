@@ -9,7 +9,7 @@ const BINARY_OF = { tsc: 'typescript', tsserver: 'typescript', playwright: '@pla
 const BUN_OWN = new Set(['test', 'build', 'pm', 'repl', 'patch', 'info', 'unlink']);
 const MAKE = /^(?:make|just)\s+([\w.-]+)/;
 const TOOL = /^(?:npx|pnpx|bunx|go|pytest|python3?|uv|poetry|tox|cargo|node|deno|vitest|jest|swift|xcodebuild|dotnet|mvn|\.\/mvnw|gradle|\.\/gradlew|rspec|bundle|rails|bin\/rails|rake|mix|php|composer|vendor\/bin\/(?:phpunit|pest)|flutter|dart|turbo|nx)\b/;
-const BUILTIN = new Set(['install', 'i', 'ci', 'add', 'remove', 'rm', 'exec', 'dlx', 'x', 'init', 'create', 'publish', 'update', 'upgrade', 'up', 'link', 'outdated', 'audit', 'why', 'run', 'login', 'version', 'help', 'dedupe', 'prune']);
+const BUILTIN = new Set(['install', 'i', 'ci', 'add', 'remove', 'rm', 'exec', 'dlx', 'x', 'init', 'create', 'publish', 'update', 'upgrade', 'up', 'link', 'outdated', 'audit', 'why', 'run', 'login', 'version', 'help', 'dedupe', 'prune', 'workspace', 'workspaces']);
 const SINGLE_TEST = /\s-t\s|--testNamePattern|--test-name-pattern|\s-run\s|\s-k\s|::|--grep\s|--tests\s|-Dtest=|--filter[\s=]|-only-testing:|\S+\.(?:test|spec)\.[cm]?[jt]sx?\b|\S+_test\.go\b|\S*test_\S+\.py\b|\S+_spec\.rb\b|\S+_test\.(?:rb|exs|dart)\b|\bcargo test\s+[\w:]+/;
 
 // The scripts, targets and CI commands that exist, and which file defines each script and target.

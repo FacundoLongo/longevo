@@ -169,7 +169,8 @@ export function unsharedRules(dirs, inv, texts, loads, inUse, aliases = new Map(
     if (missing.length) {
       // A few lines left in a CLAUDE.md that imports an AGENTS.md with the rules are meant for Claude Code alone.
       const target = base(path) === 'CLAUDE.md' ? importedAgents(path, texts[path]) : null;
-      const claudeOnly = target !== null && hasOwnRules(texts[target]) && ruleLines(texts[path]).length <= 10;
+      const agentsRules = (texts[target] ?? '').replace(/<!-- longevo:start -->[\s\S]*?<!-- longevo:end -->/g, '');
+      const claudeOnly = target !== null && hasOwnRules(agentsRules) && ruleLines(texts[path]).length <= 10;
       findings.push({
         id: 'rules-not-shared',
         severity: claudeOnly ? 'low' : 'high',

@@ -64,6 +64,11 @@ test('flags and paths after the runner are not script names', () => {
   assert.deepEqual(scan(root).findings.filter((f) => f.id === 'missing-command').map((f) => f.name), ['test']);
 });
 
+test('yarn workspace runs a script in a package, not a script called workspace', () => {
+  const root = makeRepo({ 'package.json': JSON.stringify({ workspaces: ['web'] }), 'web/package.json': JSON.stringify({ scripts: { test: 'vitest' } }), 'AGENTS.md': 'Run `yarn workspace web test`.\n' });
+  assert.ok(!scan(root).findings.some((f) => f.id === 'missing-command'), JSON.stringify(scan(root).findings));
+});
+
 test('bun test --test-name-pattern runs a single test', () => {
   const root = makeRepo({ 'package.json': '{}', 'AGENTS.md': 'Run `bun test`. One test: `bun test --test-name-pattern pay`.\n' });
   assert.ok(!ids(scan(root)).includes('no-single-test-command'));

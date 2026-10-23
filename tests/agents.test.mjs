@@ -149,6 +149,13 @@ test('a CLAUDE.md that imports an empty AGENTS.md still has rules other agents m
   assert.equal(report.findings.find((f) => f.id === 'rules-not-shared')?.severity, 'high');
 });
 
+test('an AGENTS.md with only the Longevo block has no rules of its own', () => {
+  const block = '<!-- longevo:start -->\n## Longevo\n- Run all tests: `npm test`\n- Start each session with the `longevo-init` skill.\n<!-- longevo:end -->\n';
+  const root = makeRepo({ 'AGENTS.md': block, 'CLAUDE.md': '@AGENTS.md\n\n- Use pnpm.\n- Tests use vitest.\n' });
+  const report = scan(root, { home: newHome({ '.claude/x': '', '.codex/x': '' }) });
+  assert.equal(report.findings.find((f) => f.id === 'rules-not-shared')?.severity, 'high');
+});
+
 test('does not count nested instruction files as unshared when run from the root', () => {
   const root = makeRepo({ 'AGENTS.md': '# Rules\n- a\n', 'packages/a/AGENTS.md': '# A\n- b\n' });
   const report = scan(root, { home: newHome({ '.claude/x': '' }) });

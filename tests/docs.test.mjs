@@ -113,6 +113,22 @@ test('docs outside docs/ are candidates too, after the ones in docs/', () => {
   assert.deepEqual(docs(root).candidates.map((c) => c.path), ['docs/api.md', 'docs/history.md', 'docs/security.md', 'apps/api/README.md', 'context/architecture.md']);
 });
 
+test('only exact changelog and template names, and test folders outside docs/, are left out', () => {
+  const root = makeRepo({
+    'docs/changelog-policy.md': '# How we write the changelog\n',
+    'src/changelog/README.md': '# Changelog feature\n',
+    'docs/test/plan.md': '# Test plan\n',
+    'docs/CHANGELOG.md': '# Changes\n',
+    'tests/fixtures/input.md': '# Input\n',
+  });
+  assert.deepEqual(docs(root).candidates.map((c) => c.path), ['docs/changelog-policy.md', 'docs/test/plan.md', 'src/changelog/README.md']);
+});
+
+test('a repo that is one skill still has docs to cover', () => {
+  const root = makeRepo({ 'SKILL.md': '# Skill\n', 'references/guide.md': '# Guide\n', 'docs/api.md': '# API\n' });
+  assert.deepEqual(docs(root).candidates.map((c) => c.path), ['docs/api.md']);
+});
+
 test('the scan reports stale docs and their candidates', async () => {
   const { scan } = await import('../src/scan.mjs');
   const root = makeRepo({ 'docs/pay.md': DOC, 'docs/api.md': '# API\n', 'src/pay/a.ts': '1' });

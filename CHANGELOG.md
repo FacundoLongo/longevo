@@ -22,7 +22,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 - `init` proposes frontmatter for docs outside `docs/`, like `context/*.md` or a package README. It still leaves out instruction files, skills, test fixtures, templates, community files and the front page README.
 - `bun test` and `bun build` are Bun commands, not missing package.json scripts.
-- A flag after the runner (`pnpm --filter web dev`) or a file that Bun runs (`bun src/index.ts`) is no longer reported as a missing script.
+- A flag after the runner (`pnpm --filter web dev`), `yarn workspace <name>` or a file that Bun runs (`bun src/index.ts`) is no longer reported as a missing script.
 - A few lines left in a CLAUDE.md that imports AGENTS.md are reported as Claude Code rules, at low severity, so they do not come back in every session update.
 - The CLAUDE.md size check counts the AGENTS.md it imports, because Claude Code loads both.
 - `bun test --test-name-pattern` counts as a way to run one test.

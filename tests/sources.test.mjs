@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { apply } from '../src/lib/apply.mjs';
 import { collectSources, renderSources, sourceFindings } from '../src/lib/sources.mjs';
 import { briefs } from '../src/lib/work.mjs';
 import { scope } from '../src/lib/repo.mjs';
@@ -55,4 +56,11 @@ test('says so when no doc has sources', () => {
 test('lists briefs with their status', () => {
   const root = makeRepo({ 'docs/work/2026-10-01-refunds/brief.md': '---\nstatus: done\ntask: https://linear.app/t/9\ncovers: ["src/refunds/**"]\n---\n# Brief\n' });
   assert.deepEqual(briefs(scope(root), listed(root)), [{ path: 'docs/work/2026-10-01-refunds/brief.md', status: 'done', task: 'https://linear.app/t/9', covers: ['src/refunds/**'] }]);
+});
+
+test('checked needs a url, and dates Longevo cannot read count as old', () => {
+  const root = makeRepo({ 'docs/a.md': '---\nsources:\n  - title: No link\n    checked: 2026-01-01\n---\n' });
+  assert.throws(() => apply('checked', root, { doc: 'docs/a.md' }), /url/);
+  const found = sourceFindings([{ url: 'a', citedBy: ['d'], checked: 'last week' }, { url: 'b', citedBy: ['d'], checked: '2026/01/01' }], '2026-10-11');
+  assert.deepEqual(found.map((f) => f.evidence[0]), ['a', 'b']);
 });

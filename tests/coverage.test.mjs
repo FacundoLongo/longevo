@@ -118,3 +118,10 @@ test('the coverage state carries a hash of the record it would write, for declin
   assert.equal(coverageState(root, '# Coverage\n\none\n').hash, one.hash);
   assert.notEqual(coverageState(root, '# Coverage\n\ntwo\n').hash, one.hash);
 });
+
+test('the coverage record stays fast with 200k files in one area', () => {
+  const files = Array.from({ length: 200_000 }, (_, i) => `src/main/f${i}.java`);
+  const started = Date.now();
+  renderCoverage({ files, packages: [], tests: [], docs: [{ path: 'docs/a.md', covers: ['src/main/**'], verified: '2026-10-01' }] });
+  assert.ok(Date.now() - started < 5000, `took ${Date.now() - started} ms`);
+});

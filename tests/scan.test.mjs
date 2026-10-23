@@ -322,3 +322,34 @@ test('an instruction file deleted but not staged is gone, not unreadable', () =>
   assert.equal(report.findings.some((f) => f.id === 'instruction-unreadable'), false);
   assert.deepEqual(report.instructions.files.map((f) => f.path), ['AGENTS.md']);
 });
+
+test('pnpm, yarn and bun can run a package binary, so only missing scripts are flagged', async () => {
+  const { scan } = await import('../src/scan.mjs');
+  const root = makeRepo({
+    'AGENTS.md': '# A\n- `pnpm vitest run src/a.test.ts`\n- `yarn eslint .`\n- `bun tsc --noEmit`\n- `pnpm test`\n- `npm run lint`\n- `pnpm build`\n- `yarn dev`\n',
+    'package.json': '{"scripts":{},"devDependencies":{"vitest":"1","eslint":"9","typescript":"5"}}',
+  });
+  const missing = scan(root, { home: root }).findings.filter((f) => f.id === 'missing-command').map((f) => f.name);
+  assert.deepEqual(missing.sort(), ['build', 'dev', 'lint', 'test']);
+});
+
+test('instruction files: a dangling link is reported; a fenced @AGENTS.md is not an import', async () => {
+  const { scan } = await import('../src/scan.mjs');
+  const { symlinkSync } = await import('node:fs');
+  const root = makeRepo({ 'AGENTS.md': '# Rules\n- `npm test`\n' });
+  symlinkSync('docs/gone.md', join(root, 'CLAUDE.md'));
+  gitIn(root, 'add', 'CLAUDE.md');
+  const dangling = scan(root, { home: root }).findings.find((f) => f.id === 'instruction-unreadable');
+  assert.match(dangling.message, /link to a file that does not exist/);
+  const fenced = makeRepo({ 'AGENTS.md': '# Rules\n', 'CLAUDE.md': '# C\n~~~\n@AGENTS.md\n~~~\n' });
+  assert.ok(scan(fenced, { home: fenced }).findings.some((f) => f.id === 'claude-sees-only-claude-md'));
+});
+
+test('a dangling instruction link says to fix the link', async () => {
+  const { scan } = await import('../src/scan.mjs');
+  const { symlinkSync } = await import('node:fs');
+  const root = makeRepo({ 'AGENTS.md': '# Rules\n' });
+  symlinkSync('docs/gone.md', join(root, 'CLAUDE.md'));
+  const finding = scan(root, { home: root }).findings.find((f) => f.id === 'instruction-unreadable');
+  assert.match(finding.message, /fix or remove the link\.$/);
+});

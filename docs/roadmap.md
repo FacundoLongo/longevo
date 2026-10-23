@@ -48,7 +48,6 @@ Measured in October 2026 on copies of two of the maintainer's repos. To compare 
 
 | Decision | Options | We lean to |
 | --- | --- | --- |
-| Deterministic checks | Our own script, or an existing linter (ctxlint, agnix) | Our own small script. No linter checks `covers`, rules or sources |
 | `owner` field in frontmatter | Required, optional or removed | Optional. Teams need it, solo users do not |
 | Session-start hook | On by default, or optional | Optional, until the 10-line summary proves useful |
 

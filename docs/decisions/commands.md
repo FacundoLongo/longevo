@@ -16,3 +16,17 @@ Status: Accepted · 2026-10-11
 - The same input gives the same files in every agent, and unit tests cover repeated runs and the block size limit.
 - One question instead of many, and you still see every diff before it is written.
 - More code to maintain in the skill's `scripts/`.
+
+## D14. Run the deterministic checks with our own engine
+
+Status: Accepted · 2026-10-23
+
+**Context.** Each command needs facts that must not depend on the model: which agent loads which file, broken commands and paths, stale docs, rules whose code is gone. Linters for agent instructions exist (ctxlint, agnix), but they check instruction files only.
+
+**Options.** An existing linter · Our own engine · Both
+
+**Decision.** Our own engine (`longevo.mjs`), with Node built-ins only. No linter checks `covers`, business rules, sources or briefs, and a second tool to install would break the one-command setup in five agents.
+
+**Consequences.**
+- One script with no dependencies gives the same facts in every agent.
+- We maintain checks that a linter may already have, like instruction file size.

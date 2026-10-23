@@ -101,3 +101,14 @@ test('replacing a key with block text or a list with blank lines leaves no orpha
 test('new frontmatter on a CRLF doc uses CRLF too', () => {
   assert.equal(setFrontmatter('# CRLF\r\n\r\nText.\r\n', { verified: '2026-10-12' }), '---\r\nverified: 2026-10-12\r\n---\r\n\r\n# CRLF\r\n\r\nText.\r\n');
 });
+
+test('quoted values with comments keep their value', () => {
+  const { data } = parseFrontmatter('---\nsources:\n  - url: https://a\n    checked: "2026-08-01" # by Ana\n---\n');
+  assert.equal(data.sources[0].checked, '2026-08-01');
+});
+
+test('the reader takes item fields only at their own column, like the writer', async () => {
+  const { parseFrontmatter } = await import('../src/lib/frontmatter.mjs');
+  const { data } = parseFrontmatter('---\nsources:\n  - url: https://a\n    checked: 2020-01-01\n    archive:\n      checked: 2019-01-01\n---\n');
+  assert.equal(data.sources[0].checked, '2020-01-01');
+});

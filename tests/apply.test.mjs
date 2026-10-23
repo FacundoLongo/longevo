@@ -118,6 +118,19 @@ test('uses today as the verified date when none is given', () => {
   assert.match(read(root, 'docs/pay.md'), /verified: 2030-01-02/);
 });
 
+test('verified false writes covers only, so sync checks the doc before it gets a date', () => {
+  const root = repo();
+  apply('frontmatter', root, { doc: 'docs/pay.md', covers: ['src/pay/**'], verified: false });
+  assert.equal(read(root, 'docs/pay.md'), '---\ncovers: ["src/pay/**"]\n---\n\n# Pay\n');
+  assert.throws(() => apply('frontmatter', root, { doc: 'docs/pay.md', covers: ['src/pay/**'], verified: 'soon' }), /must be a date/);
+});
+
+test('verified false removes a verified date the doc already had', () => {
+  const root = makeRepo({ 'docs/pay.md': '---\ntitle: Pay\nverified: 2025-01-01\n---\n# Pay\n', 'src/pay/a.ts': '1' });
+  apply('frontmatter', root, { doc: 'docs/pay.md', covers: ['src/pay/**'], verified: false });
+  assert.equal(read(root, 'docs/pay.md'), '---\ntitle: Pay\ncovers: ["src/pay/**"]\n---\n# Pay\n');
+});
+
 test('writes the coverage record, then reports it as unchanged', () => {
   const root = makeRepo({ 'src/a.ts': '1', 'src/a.test.ts': 'test()' });
   assert.equal(apply('coverage', root, {}).status, 'written');

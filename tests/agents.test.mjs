@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, realpathSync } from 'node:fs';
+import { mkdtempSync, realpathSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { agentsInUse, geminiFiles, installedSkills, mcpServers } from '../src/lib/agents.mjs';
@@ -105,6 +105,55 @@ test('ignores a CLAUDE.md that only imports AGENTS.md', () => {
   const root = makeRepo({ 'AGENTS.md': '# Rules\n- Use pnpm\n', 'CLAUDE.md': '@AGENTS.md\n' });
   const report = scan(root, { home: newHome({ '.claude/x': '', '.codex/x': '' }) });
   assert.ok(!report.findings.some((f) => f.id === 'rules-not-shared'));
+});
+
+test('lines left in a CLAUDE.md that imports AGENTS.md are Claude Code rules, low severity', () => {
+  const root = makeRepo({ 'AGENTS.md': '# Rules\n- Use pnpm\n', 'CLAUDE.md': '@AGENTS.md\n\n- Add a Co-Authored-By trailer for Claude.\n' });
+  const report = scan(root, { home: newHome({ '.claude/x': '', '.codex/x': '' }) });
+  const finding = report.findings.find((f) => f.id === 'rules-not-shared');
+  assert.equal(finding.severity, 'low');
+  assert.match(finding.message, /only Claude Code loads/);
+});
+
+test('CLAUDE.md is too long when it and the AGENTS.md it imports pass 200 lines', () => {
+  const rules = Array.from({ length: 190 }, (_, i) => `- Rule ${i}`).join('\n');
+  const root = makeRepo({ 'AGENTS.md': `# Rules\n${rules}\n`, 'CLAUDE.md': '@AGENTS.md\n\n- Claude only\n- Another\n- And one more\n- Four\n- Five\n- Six\n- Seven\n- Eight\n- Nine\n- Ten\n' });
+  const report = scan(root, { home: newHome({ '.claude/x': '' }) });
+  const finding = report.findings.find((f) => f.id === 'claude-md-too-long');
+  assert.ok(finding, JSON.stringify(ids(report)));
+  assert.deepEqual(finding.evidence, ['CLAUDE.md', 'AGENTS.md']);
+});
+
+test('a CLAUDE.md that links to AGENTS.md is not counted twice', () => {
+  const rules = Array.from({ length: 120 }, (_, i) => `- Rule ${i}`).join('\n');
+  const root = makeRepo({ 'AGENTS.md': `# Rules\n${rules}\n` });
+  symlinkSync('AGENTS.md', join(root, 'CLAUDE.md'));
+  gitIn(root, 'add', '-A');
+  gitIn(root, 'commit', '-q', '-m', 'link');
+  const report = scan(root, { home: newHome({ '.claude/x': '' }) });
+  assert.ok(!report.findings.some((f) => f.id === 'claude-md-too-long'), JSON.stringify(ids(report)));
+});
+
+test('.claude/CLAUDE.md that imports ../AGENTS.md counts both files', () => {
+  const rules = Array.from({ length: 190 }, (_, i) => `- Rule ${i}`).join('\n');
+  const extra = Array.from({ length: 20 }, (_, i) => `- Claude ${i}`).join('\n');
+  const root = makeRepo({ 'AGENTS.md': `# Rules\n${rules}\n`, '.claude/CLAUDE.md': `@../AGENTS.md\n${extra}\n` });
+  const report = scan(root, { home: newHome({ '.claude/x': '' }) });
+  const finding = report.findings.find((f) => f.id === 'claude-md-too-long');
+  assert.deepEqual(finding?.evidence, ['.claude/CLAUDE.md', 'AGENTS.md']);
+});
+
+test('a CLAUDE.md that imports an empty AGENTS.md still has rules other agents miss', () => {
+  const root = makeRepo({ 'AGENTS.md': '# Rules\n', 'CLAUDE.md': '@AGENTS.md\n\n- Use pnpm.\n- Tests use vitest.\n' });
+  const report = scan(root, { home: newHome({ '.claude/x': '', '.codex/x': '' }) });
+  assert.equal(report.findings.find((f) => f.id === 'rules-not-shared')?.severity, 'high');
+});
+
+test('an AGENTS.md with only the Longevo block has no rules of its own', () => {
+  const block = '<!-- longevo:start -->\n## Longevo\n- Run all tests: `npm test`\n- Start each session with the `longevo-init` skill.\n<!-- longevo:end -->\n';
+  const root = makeRepo({ 'AGENTS.md': block, 'CLAUDE.md': '@AGENTS.md\n\n- Use pnpm.\n- Tests use vitest.\n' });
+  const report = scan(root, { home: newHome({ '.claude/x': '', '.codex/x': '' }) });
+  assert.equal(report.findings.find((f) => f.id === 'rules-not-shared')?.severity, 'high');
 });
 
 test('does not count nested instruction files as unshared when run from the root', () => {

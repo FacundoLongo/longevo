@@ -197,8 +197,9 @@ function gemini(sc) {
   return write(sc, 'gemini', path, before, after);
 }
 
+// `verified: false` writes covers only: the doc is not true yet, and sync checks it before it gets a date.
 function frontmatter(sc, { doc, covers, verified }, { today, now }) {
-  checkDate(verified);
+  if (verified !== false) checkDate(verified);
   if (!existsSync(inside(sc, doc, { markdown: true }))) throw new Error(`${doc} does not exist.`);
   if (!Array.isArray(covers) || covers.length === 0) throw new Error('covers needs at least one glob.');
   const { files } = listFiles(sc);
@@ -206,7 +207,8 @@ function frontmatter(sc, { doc, covers, verified }, { today, now }) {
   const path = join(sc.root, doc);
   const before = readFileSync(path, 'utf8');
   const current = parseFrontmatter(before).data.verified;
-  return write(sc, 'frontmatter', path, before, setFrontmatter(before, { covers, verified: verified ?? nextVerified(current, today, now) }));
+  const updates = verified === false ? { covers, verified: null } : { covers, verified: verified ?? nextVerified(current, today, now) };
+  return write(sc, 'frontmatter', path, before, setFrontmatter(before, updates));
 }
 
 function readDoc(sc, doc) {

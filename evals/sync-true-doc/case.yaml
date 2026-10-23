@@ -35,8 +35,10 @@ graders:
     name: says-still-true
     focus: last_message
     criteria: >
-      Pass only if the final message says that docs/domain/refunds.md is still true after the code change
-      and that the only change to it is a new verified date. It must not say that it changed the rule text.
+      Pass only if the final message says that the refunds doc (docs/domain/refunds.md) is still true after
+      the code change, in any words (true, accurate, still matches the code), and that the only change to it
+      is a new verified date. Fail if it says it changed the rule text. Notes about git not working in the
+      sandbox do not matter.
   - type: tool_used
     name: no-commit
     tool: Bash

@@ -6,6 +6,8 @@ import { parseFrontmatter } from './frontmatter.mjs';
 import { matches, matchesAny } from './glob.mjs';
 import { realDate } from './dates.mjs';
 import { commitsSince } from './hotspots.mjs';
+import { isInstructionFile } from './instructions.mjs';
+import { dirOf } from './paths.mjs';
 import { git } from './repo.mjs';
 import { readText } from './text.mjs';
 
@@ -13,6 +15,12 @@ const MARKDOWN = /\.mdx?$/;
 const RECORD = /(^|\/)(decisions|adr|adrs|work|rfc|rfcs)\//i;
 const GENERATED_DOC = /(^|\/)docs\/(coverage|sources)\.md$/;
 const LONGEVO_KEY = /^(covers|verified)\s*[:=]/m;
+// Markdown that is never a doc to cover: dot folders, vendored code, test fixtures, the front page README
+// (GitHub would show its frontmatter), community files by their exact name, templates and changelogs.
+const NOT_A_DOC = /(^|\/)(?:\.[^/]+|node_modules|vendor|third_party)\/|^README\.mdx?$|(^|\/)SKILL\.md$|(^|\/)(?:HISTORY|LICEN[CS]E|COPYING|CODE_OF_CONDUCT|SECURITY|CONTRIBUTING|SUPPORT)(?:\.[^/]*)?$/;
+const NOT_A_DOC_ANY_CASE = /(^|\/)(?:changelog|pull_request_template|issue_template)(?:\.[^/]*)?$|(^|\/)issue_template\//i;
+// Test folders hold fixtures, except inside docs/, where a test plan is a doc.
+const TEST_DIR = /(^|\/)(?:tests?|__tests__|fixtures|__fixtures__|testdata|__snapshots__)\//;
 const countLines = (text) => text.replace(/\n$/, '').split('\n').length;
 const globs = (value) => (typeof value === 'string' && value ? [value] : Array.isArray(value) && value.length && value.every((v) => typeof v === 'string') ? value : null);
 
@@ -61,6 +69,11 @@ export function livingDocs(sc, files, generated, { drift = true } = {}) {
   const living = [];
   const invalid = [];
   const candidates = [];
+  // A skill's folder (the one with SKILL.md) holds instructions for agents, not docs.
+  const skillDirs = files.filter((file) => /(^|\/)SKILL\.md$/.test(file)).map(dirOf);
+  // A repo that is one skill keeps its docs; only the skill's own folders are left out.
+  const inSkill = (path) => skillDirs.some((dir) => (dir ? path.startsWith(`${dir}/`) : /^(?:references|scripts|assets)\//.test(path)));
+  const fixture = (path) => TEST_DIR.test(path) && !/(^|\/)docs\//.test(path);
   for (const path of files.filter((file) => MARKDOWN.test(file) && !/(^|\/)node_modules\//.test(file)).sort()) {
     const text = readText(join(sc.root, path));
     if (text === null) continue;
@@ -85,11 +98,13 @@ export function livingDocs(sc, files, generated, { drift = true } = {}) {
       const changed = anchor ? changedSince(sc, anchor, covers, generated, walks, { since: fresh ? data.verified : null }) : [];
       const unmatched = covers.filter((pattern) => !files.some((file) => matches(file, pattern)));
       living.push({ path, covers, verified: data.verified ?? null, anchor, stale: changed.length > 0, changed, unmatched });
-    } else if (/(^|\/)docs\//.test(path) && !RECORD.test(path) && !GENERATED_DOC.test(path) && !/(^|\/)CHANGELOG/i.test(path)) {
+    } else if (!RECORD.test(path) && !GENERATED_DOC.test(path) && !NOT_A_DOC.test(path) && !NOT_A_DOC_ANY_CASE.test(path) && !fixture(path) && !isInstructionFile(path) && !inSkill(path)) {
       candidates.push({ path, lines: countLines(text) });
     }
   }
-  return { living, invalid, candidates: candidates.slice(0, 50) };
+  // Docs in a docs/ folder first, so a repo with many READMEs still lists them.
+  const inDocs = (candidate) => (/(^|\/)docs\//.test(candidate.path) ? 0 : 1);
+  return { living, invalid, candidates: candidates.sort((a, b) => inDocs(a) - inDocs(b)).slice(0, 50) };
 }
 
 export function docFindings(docs) {

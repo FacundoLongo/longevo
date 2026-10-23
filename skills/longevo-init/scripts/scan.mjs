@@ -87,7 +87,7 @@ export function scan(cwd, { markSession = false, home = homedir() } = {}) {
     block: { file: relative(sc.root, agentsPath).split(sep).join('/'), ...readBlock(readText(agentsPath)) },
     coverage: coverageState(sc.root, coverageFor(sc, files, generated, { docs: docs.living })),
     findings: [
-      ...instructionFindings(instructionInventory, loads),
+      ...instructionFindings(instructionInventory, loads, texts, aliases),
       ...unsharedRules(dirs, instructionInventory, texts, loads, inUse.length ? inUse : AGENTS, aliases),
       ...skillFindings(inUse, skills),
       ...commandFindings(cited, real, { binaries }),

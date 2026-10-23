@@ -19,7 +19,7 @@ If the user asks only for a report, do sections 2 to 5 without the list.
 
 ## 2. Stale docs
 
-For each doc with `stale: true`, read the doc and its `diff` (the code that changed after `anchor`, with `commits`). Judge with [references/judging.md](references/judging.md):
+For each doc with `stale: true`, read the doc and its `diff` (the code that changed after `anchor`, with `commits`). Judge each claim with [references/judging.md](references/judging.md):
 
 - **Still true:** propose only a new `verified` date.
 - **Partly wrong:** propose the smallest diff that makes it true, plus a new `verified` date.
@@ -48,7 +48,7 @@ Ask only what the code and the sources cannot answer, one question at a time, wi
 
 ## 7. Apply
 
-Apply only the picked items, in the order in [references/apply.md](references/apply.md): prose with your edit tool, exactly as the diff you showed; dates and generated files with `longevo.mjs apply`. Record the items not picked with `apply decline`. If an apply command returns an error, show it and stop. Then show `git status --short`, so new files show too, and `git diff --stat`. Never stage or commit.
+Apply only the picked items, in the order in [references/apply.md](references/apply.md): prose with your edit tool, exactly as the diff you showed; dates and generated files with `longevo.mjs apply`. Record the items not picked with `apply decline`, if any. If an apply command returns an error, show it and stop. Then show `git status --short`, so new files show too, and `git diff --stat`. Never stage or commit.
 
 ## Rules
 

@@ -25,7 +25,7 @@ One row per finding, most severe first: severity, what is wrong, evidence (`file
 | Command in the instructions | Exists | Where |
 | --- | --- | --- |
 
-`Where` is the `where` list of each command in `commands.cited`: the package.json, Makefile or justfile that defines it.
+`Where` is the `where` list of each command in `commands.cited`: the package.json, Makefile or justfile that defines it. A tool command (`kind: tool`, like `go test` or `bun test`) has no `where`: say whether CI runs it, from `commands.real.ci`.
 
 Add the real test command from `commands.real` (scripts, targets, CI and hooks) when the instructions miss it.
 
@@ -37,10 +37,10 @@ Tests by area and kind from `tests`, the anti-golden tests you confirmed with th
 
 MCP servers by name and where they are set (`agents.mcp`), repo skills that some agents miss, and overlapping skills. Name the home files you read (`home.read`).
 
-## 7. Changes
-
-The numbered list from SKILL.md section 5, each with its diff, then the question. In an audit, leave this section out.
-
-## 8. Not checked
+## 7. Not checked
 
 What the engine or you could not check (including the folders in `notScanned`), and the command used, so the user can repeat it.
+
+## 8. Changes
+
+The numbered list from SKILL.md section 5, each with its diff, then the question. Nothing comes after the question. In an audit, leave this section out.

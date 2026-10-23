@@ -59,7 +59,7 @@ node <this skill's folder>/scripts/longevo.mjs apply verify --cwd . <<'JSON'
 JSON
 ```
 
-`done` takes `{"doc": "<the brief's path>"}`. Where heredocs do not work (PowerShell), write the JSON to a file and add `--input <file>`. Run `apply decline` with `{"keys": [...]}` for the rest. Then show `git status --short`, so new files show too, and `git diff --stat`. Never stage or commit.
+`done` takes `{"doc": "<the brief's path>"}`. Where heredocs do not work (PowerShell), write the JSON to a file and add `--input <file>`. Run `apply decline` with `{"keys": [...]}` for the rest, if any. Then show `git status --short`, so new files show too, and `git diff --stat`. Never stage or commit.
 
 ## Rules
 

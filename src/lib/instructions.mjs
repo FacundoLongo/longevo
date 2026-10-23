@@ -1,5 +1,5 @@
 import { realpathSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, posix } from 'node:path';
 import { dirOf } from './paths.mjs';
 import { git } from './repo.mjs';
 import { fenceKinds, unreadableReason } from './text.mjs';
@@ -16,10 +16,18 @@ const PATTERNS = [
   /(^|\/)\.github\/instructions\/.+\.instructions\.md$/,
 ];
 
+export const isInstructionFile = (file) => PATTERNS.some((pattern) => pattern.test(file));
+
 const base = (file) => file.split('/').pop();
 
 // An @AGENTS.md import in CLAUDE.md, also written as @./AGENTS.md or @../AGENTS.md.
 export const IMPORTS_AGENTS = /(^|\s)@(?:\.{1,2}\/)*AGENTS\.md\b/m;
+
+// The repo path of the AGENTS.md that this CLAUDE.md imports, or null.
+function importedAgents(path, text = '') {
+  const match = prose(text).match(/(?:^|\s)@((?:\.{1,2}\/)*AGENTS\.md)\b/m);
+  return match ? posix.normalize(posix.join(dirOf(path) || '.', match[1])) : null;
+}
 
 // The folder an instruction file applies to: .cursor/rules, .github and .claude belong to their parent.
 function ownerDir(file) {
@@ -47,7 +55,7 @@ function rawSize(root, path, text) {
 export function findInstructionFiles(files, dirs) {
   const scopeDir = dirs[dirs.length - 1];
   return files
-    .filter((file) => PATTERNS.some((pattern) => pattern.test(file)))
+    .filter(isInstructionFile)
     .filter((file) => {
       const owner = ownerDir(file);
       return dirs.includes(owner) || scopeDir === '' || owner === scopeDir || owner.startsWith(`${scopeDir}/`);
@@ -89,7 +97,7 @@ export function whoLoads(dirs, files, texts, { geminiFiles = ['GEMINI.md'], alia
   return { 'claude-code': claude, codex, cursor, gemini, copilot };
 }
 
-export function instructionFindings(inv, loads) {
+export function instructionFindings(inv, loads, texts = {}, aliases = new Map()) {
   const findings = [];
   const claude = loads['claude-code'];
   const claudeFiles = claude.filter((file) => base(file).startsWith('CLAUDE'));
@@ -113,8 +121,18 @@ export function instructionFindings(inv, loads) {
     findings.push({ id: 'only-claude-md', severity: 'medium', evidence: claudeFiles, message: 'The rules live only in CLAUDE.md. Codex, Cursor and Gemini CLI do not load it.' });
   }
   for (const file of inv) {
-    if (base(file.path) === 'CLAUDE.md' && file.lines > 200) {
-      findings.push({ id: 'claude-md-too-long', severity: 'medium', evidence: [file.path], message: `${file.path} has ${file.lines} lines. Claude Code recommends fewer than 200.` });
+    // Claude Code loads the AGENTS.md this CLAUDE.md imports together with it, so both count. A CLAUDE.md
+    // that is the same file as AGENTS.md on disk counts once.
+    const linked = (aliases.get(file.path) ?? []).length > 1;
+    const target = base(file.path) === 'CLAUDE.md' && !linked ? importedAgents(file.path, texts[file.path]) : null;
+    const imported = target ? inv.find((f) => f.path === target) : null;
+    const agentsPath = imported?.path;
+    const loaded = file.lines + (imported?.lines ?? 0);
+    if (base(file.path) === 'CLAUDE.md' && loaded > 200) {
+      const message = imported
+        ? `${file.path} and the ${agentsPath} it imports have ${loaded} lines. Claude Code loads both and recommends fewer than 200.`
+        : `${file.path} has ${file.lines} lines. Claude Code recommends fewer than 200.`;
+      findings.push({ id: 'claude-md-too-long', severity: 'medium', evidence: imported ? [file.path, agentsPath] : [file.path], message });
     }
     if (file.commits === 1) {
       findings.push({ id: 'never-reviewed', severity: 'low', evidence: [file.path], message: `${file.path} has a single commit, so nobody changed it after it was written.` });
@@ -130,11 +148,13 @@ export function instructionFindings(inv, loads) {
   return findings;
 }
 
-// True when a file has rules of its own, not only a title and an import.
-function hasOwnRules(text = '') {
+// The lines of a file that are rules of its own, not a title or an import.
+function ruleLines(text = '') {
   const body = text.replace(/^---\n[\s\S]*?\n---\n?/, '');
-  return body.split('\n').some((line) => line.trim() && !/^\s*#/.test(line) && !/^\s*@\S+\s*$/.test(line));
+  return body.split('\n').filter((line) => line.trim() && !/^\s*#/.test(line) && !/^\s*@\S+\s*$/.test(line));
 }
+
+const hasOwnRules = (text) => ruleLines(text).length > 0;
 
 // Instruction files in the chain that some agent in use does not load.
 export function unsharedRules(dirs, inv, texts, loads, inUse, aliases = new Map()) {
@@ -147,12 +167,18 @@ export function unsharedRules(dirs, inv, texts, loads, inUse, aliases = new Map(
     members.forEach((member) => reported.add(member));
     const missing = inUse.filter((agent) => !members.some((member) => loads[agent].includes(member)));
     if (missing.length) {
+      // A few lines left in a CLAUDE.md that imports an AGENTS.md with the rules are meant for Claude Code alone.
+      const target = base(path) === 'CLAUDE.md' ? importedAgents(path, texts[path]) : null;
+      const agentsRules = (texts[target] ?? '').replace(/<!-- longevo:start -->[\s\S]*?<!-- longevo:end -->/g, '');
+      const claudeOnly = target !== null && hasOwnRules(agentsRules) && ruleLines(texts[path]).length <= 10;
       findings.push({
         id: 'rules-not-shared',
-        severity: 'high',
+        severity: claudeOnly ? 'low' : 'high',
         evidence: [path],
         agents: missing,
-        message: `${path} has rules that ${missing.join(', ')} ${missing.length === 1 ? 'does' : 'do'} not load.`,
+        message: claudeOnly
+          ? `${path} has lines besides @AGENTS.md that only Claude Code loads. Keep only rules about Claude Code there.`
+          : `${path} has rules that ${missing.join(', ')} ${missing.length === 1 ? 'does' : 'do'} not load.`,
       });
     }
   }

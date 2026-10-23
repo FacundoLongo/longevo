@@ -1,6 +1,6 @@
 ---
 covers: ["skills/*/SKILL.md", "scripts/install.sh"]
-verified: 2026-10-12T01:07:31
+verified: 2026-10-23T20:35:15
 ---
 
 # Getting started
@@ -25,7 +25,8 @@ Install Longevo, set up a repo, and use the five skills in a normal working day.
 
 - `npx skills` puts the skills in `~/.agents/skills`, which Codex, Cursor, Gemini CLI and Copilot read, and links them for Claude Code. Update with `npx skills update -g`.
 - The Claude Code plugin puts its name before the skill name: `/longevo:longevo-init` ([D13](../decisions/packaging.md)).
-- The Gemini CLI and Copilot CLI installs are not tested yet.
+- Copilot CLI is tested with the skills in `~/.agents/skills`. It asks before it reads a skill's own files there: approve it, or start Copilot with `--add-dir ~/.agents/skills`.
+- The Copilot CLI plugin and the Gemini CLI installs are not tested yet.
 - To remove a clone install, run `scripts/install.sh --uninstall`.
 
 ## Set up a repo

@@ -1,6 +1,6 @@
 ---
 covers: ["src/lib/docs.mjs", "src/lib/coverage.mjs", "src/lib/frontmatter.mjs", "src/lib/rules.mjs", "src/lib/sources.mjs"]
-verified: 2026-10-12
+verified: 2026-10-23T20:39:45
 ---
 
 # Docs model
@@ -50,7 +50,7 @@ When files in `covers` change after the anchor commit, the doc is stale ([D11](.
 - A new `verified` date that is not committed yet counts as a check on that date, when it is later than the committed one. A date without a time covers the whole day.
 - Longevo reads YAML frontmatter only. A doc with TOML frontmatter (`+++`) cannot be a living doc.
 
-`init` proposes this frontmatter for at most five existing docs per run, starting with the areas that change most. It leaves decisions, ADRs and changelogs alone.
+`init` proposes this frontmatter for at most five existing docs per run, in `docs/` or anywhere else, starting with the areas that change most. It leaves alone decisions, ADRs, changelogs, instruction files, skills, test fixtures, templates, community files and the front page README. A doc that is already wrong gets only `covers`; `sync` checks it and gives it its first `verified` date.
 
 ## Coverage record
 

@@ -1,6 +1,6 @@
 ---
 covers: ["src/scan.mjs", "src/lib/**"]
-verified: 2026-10-12
+verified: 2026-10-23T20:39:45
 ---
 
 # Checks
@@ -35,11 +35,11 @@ Steps 1 to 8 are the engine. Step 9 is the model.
 | Every path exists | 23% of repos point to code that no longer exists |
 | No overviews, folder trees or rules a linter already covers | They raise the cost and do not help |
 | No contradictions between root, subfolders, Cursor rules and Copilot instructions | It happens in 28% of instruction files |
-| Size: CLAUDE.md under 200 lines, the Codex limit of 32 KiB | Anything over the limit is cut |
+| Size: CLAUDE.md and the AGENTS.md it imports under 200 lines, the Codex limit of 32 KiB | Anything over the limit is cut |
 | Files with a single commit | 24% were never reviewed after they were generated |
 | No secrets, personal paths or "install this" instructions | These files are a path for prompt injection |
 
-It also uses the line test from BMAD: "if I delete this line, does the agent behave differently?" If not, it proposes to remove it.
+It also uses the line test from BMAD: "if I delete this line, does the agent behave differently?" If not, the report names the line.
 
 The report has: a summary with the three most useful actions, which agent loads which file, findings with evidence and a diff, documented commands against real ones, questions, and what it could not check.
 

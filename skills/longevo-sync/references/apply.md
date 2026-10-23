@@ -29,7 +29,7 @@ Each one prints `{"op", "file", "status"}` with `written` or `unchanged`, or `{"
 | Change | Key |
 | --- | --- |
 | New verified date | `verify:<doc>:<first 12 characters of the newest commit in its commits>`, or `verify:<doc>:none` for a first date (`doc-not-verified`) |
-| Text diff in a doc | `diff:<doc>:<first 40 characters of the changed line>` |
+| Text diff in a doc | `diff:<doc>:<first 40 characters of the first line the diff removes, or adds when it removes none>` |
 | Rule change or new rule | `rule:<id>:<first 12 characters of the newest commit in its doc's commits, or none>` |
 | New checked date | `checked:<doc>:<url>:<this month, YYYY-MM>` |
 | New source in a doc's frontmatter | `source:<doc>:<url>` |
@@ -43,6 +43,6 @@ Keys name the newest change under the doc, the month for checked dates, or the c
 1. Prose: doc diffs, rule changes, new rules (a new rules doc gets `frontmatter` right after you create it).
 2. `verify` for each doc you confirmed or fixed, and `checked` for each source you read.
 3. `sources`, then `coverage`, so both see the new docs and rules.
-4. `decline`, with the keys of every item the user did not pick.
+4. `decline`, with the keys of every item the user did not pick. Skip it when the user picked all of them.
 
 Then run `git status --short` and `git diff --stat` and show both, so new files show too. Never stage or commit.

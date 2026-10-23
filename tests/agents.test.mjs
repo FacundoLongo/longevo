@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, realpathSync } from 'node:fs';
+import { mkdtempSync, realpathSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { agentsInUse, geminiFiles, installedSkills, mcpServers } from '../src/lib/agents.mjs';
@@ -122,6 +122,31 @@ test('CLAUDE.md is too long when it and the AGENTS.md it imports pass 200 lines'
   const finding = report.findings.find((f) => f.id === 'claude-md-too-long');
   assert.ok(finding, JSON.stringify(ids(report)));
   assert.deepEqual(finding.evidence, ['CLAUDE.md', 'AGENTS.md']);
+});
+
+test('a CLAUDE.md that links to AGENTS.md is not counted twice', () => {
+  const rules = Array.from({ length: 120 }, (_, i) => `- Rule ${i}`).join('\n');
+  const root = makeRepo({ 'AGENTS.md': `# Rules\n${rules}\n` });
+  symlinkSync('AGENTS.md', join(root, 'CLAUDE.md'));
+  gitIn(root, 'add', '-A');
+  gitIn(root, 'commit', '-q', '-m', 'link');
+  const report = scan(root, { home: newHome({ '.claude/x': '' }) });
+  assert.ok(!report.findings.some((f) => f.id === 'claude-md-too-long'), JSON.stringify(ids(report)));
+});
+
+test('.claude/CLAUDE.md that imports ../AGENTS.md counts both files', () => {
+  const rules = Array.from({ length: 190 }, (_, i) => `- Rule ${i}`).join('\n');
+  const extra = Array.from({ length: 20 }, (_, i) => `- Claude ${i}`).join('\n');
+  const root = makeRepo({ 'AGENTS.md': `# Rules\n${rules}\n`, '.claude/CLAUDE.md': `@../AGENTS.md\n${extra}\n` });
+  const report = scan(root, { home: newHome({ '.claude/x': '' }) });
+  const finding = report.findings.find((f) => f.id === 'claude-md-too-long');
+  assert.deepEqual(finding?.evidence, ['.claude/CLAUDE.md', 'AGENTS.md']);
+});
+
+test('a CLAUDE.md that imports an empty AGENTS.md still has rules other agents miss', () => {
+  const root = makeRepo({ 'AGENTS.md': '# Rules\n', 'CLAUDE.md': '@AGENTS.md\n\n- Use pnpm.\n- Tests use vitest.\n' });
+  const report = scan(root, { home: newHome({ '.claude/x': '', '.codex/x': '' }) });
+  assert.equal(report.findings.find((f) => f.id === 'rules-not-shared')?.severity, 'high');
 });
 
 test('does not count nested instruction files as unshared when run from the root', () => {

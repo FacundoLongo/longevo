@@ -1,6 +1,6 @@
 ---
 covers: ["skills/*/SKILL.md", "scripts/install.sh"]
-verified: 2026-10-23
+verified: 2026-10-23T20:35:15
 ---
 
 # Getting started

@@ -10,7 +10,7 @@ const BUN_OWN = new Set(['test', 'build', 'pm', 'repl', 'patch', 'info', 'unlink
 const MAKE = /^(?:make|just)\s+([\w.-]+)/;
 const TOOL = /^(?:npx|pnpx|bunx|go|pytest|python3?|uv|poetry|tox|cargo|node|deno|vitest|jest|swift|xcodebuild|dotnet|mvn|\.\/mvnw|gradle|\.\/gradlew|rspec|bundle|rails|bin\/rails|rake|mix|php|composer|vendor\/bin\/(?:phpunit|pest)|flutter|dart|turbo|nx)\b/;
 const BUILTIN = new Set(['install', 'i', 'ci', 'add', 'remove', 'rm', 'exec', 'dlx', 'x', 'init', 'create', 'publish', 'update', 'upgrade', 'up', 'link', 'outdated', 'audit', 'why', 'run', 'login', 'version', 'help', 'dedupe', 'prune']);
-const SINGLE_TEST = /\s-t\s|--testNamePattern|\s-run\s|\s-k\s|::|--grep\s|--tests\s|-Dtest=|--filter[\s=]|-only-testing:|\S+\.(?:test|spec)\.[cm]?[jt]sx?\b|\S+_test\.go\b|\S*test_\S+\.py\b|\S+_spec\.rb\b|\S+_test\.(?:rb|exs|dart)\b|\bcargo test\s+[\w:]+/;
+const SINGLE_TEST = /\s-t\s|--testNamePattern|--test-name-pattern|\s-run\s|\s-k\s|::|--grep\s|--tests\s|-Dtest=|--filter[\s=]|-only-testing:|\S+\.(?:test|spec)\.[cm]?[jt]sx?\b|\S+_test\.go\b|\S*test_\S+\.py\b|\S+_spec\.rb\b|\S+_test\.(?:rb|exs|dart)\b|\bcargo test\s+[\w:]+/;
 
 // The scripts, targets and CI commands that exist, and which file defines each script and target.
 export function realCommands(root, files) {
@@ -53,10 +53,12 @@ export function citedCommands(file, spans) {
   for (const span of spans) {
     const npm = span.text.match(NPM);
     const make = span.text.match(MAKE);
-    const bun = npm && npm[1] === 'bun' && !npm[2] && BUN_OWN.has(npm[3]);
-    if (npm && !bun) cited.push({ file, line: span.line, text: span.text, kind: 'script', name: npm[3], runner: npm[1], run: Boolean(npm[2]) });
+    // A flag after the runner (`pnpm --filter web dev`) or a file Bun runs (`bun src/index.ts`) is no script name.
+    const next = npm ? span.text.split(/\s+/)[npm[2] ? 2 : 1] : '';
+    const bun = npm && npm[1] === 'bun' && ((!npm[2] && BUN_OWN.has(npm[3])) || /\/|\.[cm]?[jt]sx?$/.test(next));
+    if (npm && !bun && !next.startsWith('-')) cited.push({ file, line: span.line, text: span.text, kind: 'script', name: npm[3], runner: npm[1], run: Boolean(npm[2]) });
     else if (make) cited.push({ file, line: span.line, text: span.text, kind: 'target', name: make[1] });
-    else if (bun || TOOL.test(span.text)) cited.push({ file, line: span.line, text: span.text, kind: 'tool', name: span.text.split(/\s+/)[0] });
+    else if (npm || TOOL.test(span.text)) cited.push({ file, line: span.line, text: span.text, kind: 'tool', name: span.text.split(/\s+/)[0] });
   }
   return cited;
 }

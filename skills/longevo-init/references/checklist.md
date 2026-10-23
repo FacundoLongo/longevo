@@ -9,10 +9,10 @@ What init reviews. The engine covers the first group; you check the second group
 | `no-entry-file` | No AGENTS.md or CLAUDE.md in this folder or its parents |
 | `claude-sees-only-claude-md` | CLAUDE.md does not import `@AGENTS.md`, so Claude Code does not see AGENTS.md |
 | `only-claude-md` | Codex, Cursor and Gemini CLI do not see the rules |
-| `rules-not-shared` | An instruction file with rules that some agents in use (`agents`) do not load |
+| `rules-not-shared` | An instruction file with rules that some agents in use (`agents`) do not load. Low severity: a few lines left in a CLAUDE.md that imports AGENTS.md, which only Claude Code loads |
 | `skill-not-shared` | A repo skill that some agents in use do not load. A copy in `.agents/skills` and `.claude/skills` reaches all five |
 | `overlapping-skill` | Another installed skill about tests, which the agent may follow instead of `longevo-testing` |
-| `claude-md-too-long` | CLAUDE.md is over 200 lines |
+| `claude-md-too-long` | CLAUDE.md, with the AGENTS.md it imports, is over 200 lines |
 | `codex-limit` | AGENTS.md files add up to more than 32 KiB, so Codex cuts them |
 | `claude-local-hides-agents` | CLAUDE.local.md makes Claude Code ignore AGENTS.md on this machine |
 | `never-reviewed` | The file has one commit |

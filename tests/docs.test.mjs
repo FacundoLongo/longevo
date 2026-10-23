@@ -91,18 +91,26 @@ test('lists docs that could get frontmatter, without records or generated docs',
 test('docs outside docs/ are candidates too, after the ones in docs/', () => {
   const root = makeRepo({
     'docs/api.md': '# API\n',
+    'docs/security.md': '# Security model\n',
+    'docs/history.md': '# How we got here\n',
     'context/architecture.md': '# Architecture\n',
     'apps/api/README.md': '# API app\n',
     'README.md': '# Shop\n',
     'AGENTS.md': '# Rules\n',
     'packages/web/CLAUDE.md': '# Rules\n',
     '.github/PULL_REQUEST_TEMPLATE.md': '# PR\n',
+    'docs/PULL_REQUEST_TEMPLATE.md': '# PR\n',
     'skills/pay/SKILL.md': '# Skill\n',
+    'skills/pay/references/flow.md': '# Flow\n',
     'LICENSE.md': 'MIT\n',
+    'SECURITY.md': '# Report a bug\n',
+    'CONTRIBUTING.md': '# Contributing\n',
+    'docs/changelog.md': '# Changes\n',
     'vendor/lib/README.md': '# Lib\n',
+    'tests/fixtures/input.md': '# Input\n',
     'adr/0001-use-postgres.md': '# ADR\n',
   });
-  assert.deepEqual(docs(root).candidates.map((c) => c.path), ['docs/api.md', 'README.md', 'apps/api/README.md', 'context/architecture.md']);
+  assert.deepEqual(docs(root).candidates.map((c) => c.path), ['docs/api.md', 'docs/history.md', 'docs/security.md', 'apps/api/README.md', 'context/architecture.md']);
 });
 
 test('the scan reports stale docs and their candidates', async () => {

@@ -41,11 +41,11 @@ First ask only what the code cannot answer and the list needs, one question at a
 
 Then show a numbered list of changes. Each item has the file, one line on why, the diff, and a key. Leave out any change whose key is in `declined`, and if any were left out, say so in one line: "N changes are hidden because you declined them. Say 'show declined' to see them again." When the user says that, run `apply undecline` with `{"all": true}` and scan again. Build the list with [references/apply.md](references/apply.md):
 
-- **Rule moves** for each `rules-not-shared` finding: rules that AGENTS.md does not already have.
+- **Rule moves** for each `rules-not-shared` finding: rules that AGENTS.md does not already have. For a low one, move only the lines that are not about Claude Code.
 - **`@AGENTS.md`** in CLAUDE.md for `claude-sees-only-claude-md`, and for `only-claude-md` when the block creates AGENTS.md, so Claude Code reads it too.
 - **The Gemini setting** when `gemini` is in `agents.inUse` and AGENTS.md is not in `instructions.loads.gemini`.
 - **`docs/testing.md`** from [references/testing-template.md](references/testing-template.md) when it does not exist.
-- **Frontmatter** for at most 5 docs from `docs.candidates`, starting with the areas in `hotspots.areas`. Propose only `covers` you can justify from the doc and the code. Read each doc against that code: a true doc gets today as `verified`; a doc that is already wrong gets `verified: false` and a line saying so, and `longevo-sync` fixes it and gives it its first date.
+- **Frontmatter** for at most 5 docs from `docs.candidates`, starting with the areas in `hotspots.areas`. Propose only `covers` you can justify from the doc and the code. Leave out markdown that code or tests read (search for its file name), because frontmatter would change it. Read each doc against that code: a true doc gets today as `verified`; a doc that is already wrong gets `verified: false` and a line saying so, and `longevo-sync` fixes it and gives it its first date.
 - **The block** when it is missing or different from what it should say. Show its lines exactly as the engine writes them (see [references/apply.md](references/apply.md)). If `block.error` is set (two blocks, a marker without its pair, or an open code fence), report it and leave the block out of the list.
 - **`docs/coverage.md`** when `coverage.upToDate` is false.
 

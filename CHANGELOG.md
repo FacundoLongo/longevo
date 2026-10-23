@@ -9,16 +9,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ### Changed
 
-- `apply frontmatter` takes `verified: false` for a doc that is not true yet. It writes only `covers`, and `longevo-sync` checks the doc and gives it its first date.
-- `init` reads each doc against its code before it proposes frontmatter, and proposes one rule move per section of a long file.
-- `sync` judges every claim in a stale doc, also the ones older than its last check, and never installs dependencies or runs the tests to check a claim.
+- `apply frontmatter` takes `verified: false` for a doc that is not true yet. It writes only `covers` and removes an old `verified`, so `longevo-sync` checks the doc and gives it its first date.
+- `init` reads each doc against its code before it proposes frontmatter.
+- `init` proposes one rule move per section of a long file, not one per rule.
+- `init` names the lines that fail the line test in the report instead of proposing to remove them.
+- `init` writes `docs/testing.md` in the language of the repo's docs.
+- `sync` judges every claim in a stale doc, also the ones older than its last check.
+- `sync` never installs dependencies or runs the tests to check a claim.
+- The getting started guide covers Copilot CLI, now tested with the skills in `~/.agents/skills`.
 
 ### Fixed
 
-- `init` proposes frontmatter for docs outside `docs/`, like `context/*.md` or a package README.
+- `init` proposes frontmatter for docs outside `docs/`, like `context/*.md` or a package README. It still leaves out instruction files, skills, test fixtures, templates, community files and the front page README.
 - `bun test` and `bun build` are Bun commands, not missing package.json scripts.
-- Lines left in a CLAUDE.md that imports AGENTS.md are reported as Claude Code rules, at low severity, so they do not come back in every session update.
+- A flag after the runner (`pnpm --filter web dev`) or a file that Bun runs (`bun src/index.ts`) is no longer reported as a missing script.
+- A few lines left in a CLAUDE.md that imports AGENTS.md are reported as Claude Code rules, at low severity, so they do not come back in every session update.
 - The CLAUDE.md size check counts the AGENTS.md it imports, because Claude Code loads both.
+- `bun test --test-name-pattern` counts as a way to run one test.
 - `init` lists `docs/coverage.md` in the block's `creating` when the same run creates it. Before, the block failed.
 - The `init` report ends with the list of changes and its question; "Not checked" comes before them.
 

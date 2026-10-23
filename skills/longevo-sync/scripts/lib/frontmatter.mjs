@@ -170,17 +170,18 @@ export function setFrontmatter(text, updates) {
   // Written lines follow the file: CRLF frontmatter, or a CRLF body when there is no frontmatter yet.
   const crlf = parsed.hasFrontmatter ? lines[0].endsWith('\r') : text.includes('\r\n');
   const eol = crlf ? '\r' : '';
-  const rendered = Object.entries(updates).map(([key, v]) => [key, renderEntry(key, v, eol)]);
-  if (!parsed.hasFrontmatter) return `---${eol}\n${rendered.map(([, line]) => line).join('\n')}\n---${eol}\n${eol}\n${text}`;
+  // A null value removes the key.
+  const rendered = Object.entries(updates).map(([key, v]) => [key, v === null ? null : renderEntry(key, v, eol)]);
+  if (!parsed.hasFrontmatter) return `---${eol}\n${rendered.filter(([, line]) => line !== null).map(([, line]) => line).join('\n')}\n---${eol}\n${eol}\n${text}`;
   const end = closingLine(lines);
   const block = lines.slice(1, end);
   for (const [key, line] of rendered) {
     const start = block.findIndex((l) => clean(l).startsWith(`${key}:`) && KEY_VALUE.test(clean(l)) && clean(l).match(KEY_VALUE)[1] === key);
     if (start === -1) {
-      block.push(line);
+      if (line !== null) block.push(line);
       continue;
     }
-    block.splice(start, keyEnd(block, start) - start, line);
+    block.splice(start, keyEnd(block, start) - start, ...(line === null ? [] : [line]));
   }
   return [lines[0], ...block, ...lines.slice(end)].join('\n');
 }

@@ -207,7 +207,7 @@ function frontmatter(sc, { doc, covers, verified }, { today, now }) {
   const path = join(sc.root, doc);
   const before = readFileSync(path, 'utf8');
   const current = parseFrontmatter(before).data.verified;
-  const updates = verified === false ? { covers } : { covers, verified: verified ?? nextVerified(current, today, now) };
+  const updates = verified === false ? { covers, verified: null } : { covers, verified: verified ?? nextVerified(current, today, now) };
   return write(sc, 'frontmatter', path, before, setFrontmatter(before, updates));
 }
 

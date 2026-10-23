@@ -1,6 +1,6 @@
 ---
 covers: ["src/scan.mjs", "src/lib/**"]
-verified: 2026-10-23
+verified: 2026-10-23T20:35:15
 ---
 
 # Checks
@@ -39,7 +39,7 @@ Steps 1 to 8 are the engine. Step 9 is the model.
 | Files with a single commit | 24% were never reviewed after they were generated |
 | No secrets, personal paths or "install this" instructions | These files are a path for prompt injection |
 
-It also uses the line test from BMAD: "if I delete this line, does the agent behave differently?" If not, it proposes to remove it.
+It also uses the line test from BMAD: "if I delete this line, does the agent behave differently?" If not, the report names the line.
 
 The report has: a summary with the three most useful actions, which agent loads which file, findings with evidence and a diff, documented commands against real ones, questions, and what it could not check.
 

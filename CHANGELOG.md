@@ -5,10 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-10-23
+
 ### Fixed
 
 - `claude-local-hides-agents` no longer fires when CLAUDE.md imports AGENTS.md ([#8](https://github.com/FacundoLongo/longevo/issues/8)).
 - `apply import` on a CLAUDE.md linked to another folder's AGENTS.md says to replace the link, instead of saying Claude Code already reads the file.
+- The scan finds a `CLAUDE.local.md` that git ignores, so `claude-local-hides-agents` works where that file usually lives ([#10](https://github.com/FacundoLongo/longevo/issues/10)).
 
 ## [0.2.2] - 2026-10-23
 
@@ -88,7 +91,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 - Contributing guide with rules for commit messages and this changelog.
 - MIT license.
 
-[Unreleased]: https://github.com/FacundoLongo/longevo/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/FacundoLongo/longevo/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/FacundoLongo/longevo/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/FacundoLongo/longevo/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/FacundoLongo/longevo/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/FacundoLongo/longevo/compare/v0.1.0...v0.2.0

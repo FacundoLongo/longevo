@@ -5,9 +5,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-23
+
 ### Changed
 
 - The getting started guide says which folders Copilot CLI needs after a clone install.
+
+### Fixed
+
+- In a monorepo, Claude Code is no longer reported to load a package's AGENTS.md that only the root CLAUDE.md imports, and the package's CLAUDE.md gets the missing `@AGENTS.md` finding ([#5](https://github.com/FacundoLongo/longevo/issues/5)).
 
 ## [0.2.1] - 2026-10-23
 
@@ -76,7 +82,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 - Contributing guide with rules for commit messages and this changelog.
 - MIT license.
 
-[Unreleased]: https://github.com/FacundoLongo/longevo/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/FacundoLongo/longevo/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/FacundoLongo/longevo/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/FacundoLongo/longevo/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/FacundoLongo/longevo/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/FacundoLongo/longevo/releases/tag/v0.1.0

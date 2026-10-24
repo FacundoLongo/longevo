@@ -156,6 +156,18 @@ test('an AGENTS.md with only the Longevo block has no rules of its own', () => {
   assert.equal(report.findings.find((f) => f.id === 'rules-not-shared')?.severity, 'high');
 });
 
+test('a nested AGENTS.md is loaded by Claude Code only when a CLAUDE.md imports it', () => {
+  const root = makeRepo({
+    'CLAUDE.md': '@AGENTS.md\n',
+    'AGENTS.md': '# Rules\n- Use pnpm\n',
+    'packages/a/CLAUDE.md': '# A\n- Use the a client\n',
+    'packages/a/AGENTS.md': '# A\n- Use the a client\n',
+  });
+  const report = scan(join(root, 'packages/a'), { home: newHome({ '.claude/x': '', '.codex/x': '' }) });
+  assert.deepEqual(report.instructions.loads['claude-code'], ['CLAUDE.md', 'packages/a/CLAUDE.md', 'AGENTS.md']);
+  assert.deepEqual(report.findings.find((f) => f.id === 'claude-sees-only-claude-md')?.evidence, ['packages/a/CLAUDE.md']);
+});
+
 test('does not count nested instruction files as unshared when run from the root', () => {
   const root = makeRepo({ 'AGENTS.md': '# Rules\n- a\n', 'packages/a/AGENTS.md': '# A\n- b\n' });
   const report = scan(root, { home: newHome({ '.claude/x': '' }) });

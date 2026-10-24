@@ -77,9 +77,10 @@ export function whoLoads(dirs, files, texts, { geminiFiles = ['GEMINI.md'], alia
   const inChain = (name) => files.filter((file) => base(file) === name && dirs.includes(ownerDir(file)));
   const claudeFiles = [...inChain('CLAUDE.md'), ...inChain('CLAUDE.local.md')];
   const agentsFiles = inChain('AGENTS.md');
-  const sameAsAgents = (file) => (aliases.get(file) ?? []).some((member) => base(member) === 'AGENTS.md');
-  const importsAgents = claudeFiles.some((file) => sameAsAgents(file) || IMPORTS_AGENTS.test(prose(texts[file] ?? '')));
-  const claude = claudeFiles.length ? [...claudeFiles, ...(importsAgents ? agentsFiles : [])] : agentsFiles;
+  // Claude Code loads an AGENTS.md only when a CLAUDE.md imports that file, or is the same file on disk.
+  const imported = new Set(claudeFiles.map((file) => importedAgents(file, texts[file])).filter(Boolean));
+  const linked = (file) => (aliases.get(file) ?? []).some((member) => claudeFiles.includes(member));
+  const claude = claudeFiles.length ? [...claudeFiles, ...agentsFiles.filter((file) => imported.has(file) || linked(file))] : agentsFiles;
   const codex = dirs.flatMap((dir) => {
     const prefix = dir ? `${dir}/` : '';
     const override = files.find((file) => file === `${prefix}AGENTS.override.md`);
@@ -109,11 +110,14 @@ export function instructionFindings(inv, loads, texts = {}, aliases = new Map())
   if (!claude.length && !hasAgents) {
     findings.push({ id: 'no-entry-file', severity: 'high', message: 'There is no AGENTS.md or CLAUDE.md in this folder or its parents.' });
   }
-  if (claudeFiles.length && hasAgents && !claude.some((file) => base(file) === 'AGENTS.md')) {
+  // Each CLAUDE.md whose folder has an AGENTS.md that Claude Code does not load.
+  const unseen = inv.filter((f) => base(f.path) === 'AGENTS.md' && !claude.includes(f.path)).map((f) => f.path);
+  const blind = claudeFiles.filter((file) => unseen.some((agents) => ownerDir(agents) === ownerDir(file)));
+  if (blind.length) {
     findings.push({
       id: 'claude-sees-only-claude-md',
       severity: 'high',
-      evidence: claudeFiles,
+      evidence: blind,
       message: 'CLAUDE.md and AGENTS.md both exist, and CLAUDE.md does not import @AGENTS.md. Claude Code loads only CLAUDE.md, and the other agents load only AGENTS.md.',
     });
   }

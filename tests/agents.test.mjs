@@ -188,6 +188,16 @@ test('an AGENTS.md linked to one Claude Code loads counts as loaded', () => {
   assert.ok(!report.findings.some((f) => f.id === 'claude-sees-only-claude-md'), JSON.stringify(report.findings));
 });
 
+test('CLAUDE.local.md hides AGENTS.md only when no CLAUDE.md imports it', () => {
+  const home = newHome({ '.claude/x': '', '.codex/x': '' });
+  const hidden = makeRepo({ 'AGENTS.md': '# Rules\n- Use pnpm\n', 'CLAUDE.local.md': '- My editor\n' });
+  assert.ok(ids(scan(hidden, { home })).includes('claude-local-hides-agents'));
+  const imported = makeRepo({ 'AGENTS.md': '# Rules\n- Use pnpm\n', 'CLAUDE.md': '@AGENTS.md\n', 'CLAUDE.local.md': '- My editor\n' });
+  assert.ok(!ids(scan(imported, { home })).includes('claude-local-hides-agents'));
+  const noImport = scan(makeRepo({ 'AGENTS.md': '# Rules\n- Use pnpm\n', 'CLAUDE.md': '- Claude\n', 'CLAUDE.local.md': '- My editor\n' }), { home });
+  assert.ok(!ids(noImport).includes('claude-local-hides-agents') && ids(noImport).includes('claude-sees-only-claude-md'));
+});
+
 test('does not count nested instruction files as unshared when run from the root', () => {
   const root = makeRepo({ 'AGENTS.md': '# Rules\n- a\n', 'packages/a/AGENTS.md': '# A\n- b\n' });
   const report = scan(root, { home: newHome({ '.claude/x': '' }) });

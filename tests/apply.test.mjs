@@ -152,6 +152,12 @@ test('import adds the AGENTS.md of the folder when CLAUDE.md imports another one
   assert.equal(apply('import', done, {}).status, 'unchanged');
 });
 
+test('import explains a CLAUDE.md linked to an AGENTS.md of another folder', () => {
+  const root = makeRepo({ 'AGENTS.md': '# R\n', 'packages/a/AGENTS.md': '# A\n' });
+  symlinkSync('../../AGENTS.md', join(root, 'packages/a/CLAUDE.md'));
+  assert.throws(() => apply('import', join(root, 'packages/a'), {}), /not to packages\/a\/AGENTS\.md/);
+});
+
 test('writes the coverage record, then reports it as unchanged', () => {
   const root = makeRepo({ 'src/a.ts': '1', 'src/a.test.ts': 'test()' });
   assert.equal(apply('coverage', root, {}).status, 'written');

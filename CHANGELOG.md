@@ -14,6 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 ### Fixed
 
 - In a monorepo, Claude Code is no longer reported to load a package's AGENTS.md that only the root CLAUDE.md imports, and the package's CLAUDE.md gets the missing `@AGENTS.md` finding ([#5](https://github.com/FacundoLongo/longevo/issues/5)).
+- `apply import` adds `@AGENTS.md` when CLAUDE.md imports another AGENTS.md but not the one in its folder, the case the scan reports.
 
 ## [0.2.1] - 2026-10-23
 

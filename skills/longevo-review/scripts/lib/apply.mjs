@@ -7,7 +7,7 @@ import { coverageFor, COVERAGE_FILE } from './coverage.mjs';
 import { localDate, pad, realDate } from './dates.mjs';
 import { parseFrontmatter, setFrontmatter, setSourceChecked } from './frontmatter.mjs';
 import { matches } from './glob.mjs';
-import { IMPORTS_AGENTS, prose } from './instructions.mjs';
+import { agentsImports } from './instructions.mjs';
 import { git, listFiles, scope } from './repo.mjs';
 import { collectSources, renderSources, SOURCES_FILE } from './sources.mjs';
 import { addDeclined, removeDeclined, stateDir } from './state.mjs';
@@ -167,7 +167,8 @@ function importAgents(sc, { file }) {
     throw new Error(`${rel(sc, path)} and ${rel(sc, agents)} are the same file, so every agent reads the same rules. Nothing to import.`);
   }
   const before = readFileSync(path, 'utf8');
-  if (IMPORTS_AGENTS.test(prose(before))) return write(sc, 'import', path, before, before);
+  // Done only when CLAUDE.md imports the AGENTS.md of its own folder, the file the scan checks.
+  if (agentsImports(rel(sc, path), before).includes(rel(sc, agents))) return write(sc, 'import', path, before, before);
   const line = rel(sc, path).endsWith('.claude/CLAUDE.md') ? '@../AGENTS.md' : '@AGENTS.md';
   const eol = before.includes('\r\n') ? '\r\n' : '\n';
   return write(sc, 'import', path, before, `${line}${eol}${eol}${before}`);

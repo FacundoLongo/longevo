@@ -1,6 +1,6 @@
 ---
 covers: ["src/scan.mjs", "src/lib/**"]
-verified: 2026-10-23T21:11:16
+verified: 2026-10-23T21:18:11
 ---
 
 # Checks

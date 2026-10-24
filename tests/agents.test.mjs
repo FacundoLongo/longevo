@@ -168,6 +168,26 @@ test('a nested AGENTS.md is loaded by Claude Code only when a CLAUDE.md imports 
   assert.deepEqual(report.findings.find((f) => f.id === 'claude-sees-only-claude-md')?.evidence, ['packages/a/CLAUDE.md']);
 });
 
+test('a CLAUDE.md with two imports loads both AGENTS.md files', () => {
+  const root = makeRepo({
+    'AGENTS.md': '# Rules\n- Use pnpm\n',
+    'packages/a/CLAUDE.md': '@../../AGENTS.md\n@AGENTS.md\n',
+    'packages/a/AGENTS.md': '# A\n- Use the a client\n',
+  });
+  const report = scan(join(root, 'packages/a'), { home: newHome({ '.claude/x': '', '.codex/x': '' }) });
+  assert.deepEqual(report.instructions.loads['claude-code'], ['packages/a/CLAUDE.md', 'AGENTS.md', 'packages/a/AGENTS.md']);
+  assert.ok(!report.findings.some((f) => ['claude-sees-only-claude-md', 'rules-not-shared'].includes(f.id)), JSON.stringify(ids(report)));
+});
+
+test('an AGENTS.md linked to one Claude Code loads counts as loaded', () => {
+  const root = makeRepo({ 'CLAUDE.md': '@AGENTS.md\n', 'AGENTS.md': '# Rules\n- Use pnpm\n', 'packages/a/CLAUDE.md': '# A\n- Use the a client\n' });
+  symlinkSync('../../AGENTS.md', join(root, 'packages/a/AGENTS.md'));
+  gitIn(root, 'add', '-A');
+  gitIn(root, 'commit', '-q', '-m', 'link');
+  const report = scan(join(root, 'packages/a'), { home: newHome({ '.claude/x': '', '.codex/x': '' }) });
+  assert.ok(!report.findings.some((f) => f.id === 'claude-sees-only-claude-md'), JSON.stringify(report.findings));
+});
+
 test('does not count nested instruction files as unshared when run from the root', () => {
   const root = makeRepo({ 'AGENTS.md': '# Rules\n- a\n', 'packages/a/AGENTS.md': '# A\n- b\n' });
   const report = scan(root, { home: newHome({ '.claude/x': '' }) });

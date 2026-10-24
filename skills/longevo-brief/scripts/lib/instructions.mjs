@@ -147,7 +147,7 @@ export function instructionFindings(inv, loads, texts = {}, aliases = new Map())
   if (codexBytes > 32768) {
     findings.push({ id: 'codex-limit', severity: 'medium', message: `Codex loads ${codexBytes} bytes of AGENTS.md here, and it stops at 32 KiB.` });
   }
-  if (inv.some((file) => base(file.path) === 'CLAUDE.local.md') && hasAgents) {
+  if (inv.some((file) => base(file.path) === 'CLAUDE.local.md') && hasAgents && !claude.some((file) => base(file) === 'AGENTS.md')) {
     findings.push({ id: 'claude-local-hides-agents', severity: 'low', message: 'CLAUDE.local.md exists, so Claude Code ignores AGENTS.md on this machine.' });
   }
   return findings;

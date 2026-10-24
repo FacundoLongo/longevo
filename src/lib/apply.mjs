@@ -159,10 +159,15 @@ function importAgents(sc, { file }) {
   const name = (file !== undefined ? [file] : ['CLAUDE.md', '.claude/CLAUDE.md']).find((f) => existsSync(join(sc.cwd, f)));
   const path = name === undefined ? undefined : inside(sc, name, { base: sc.cwd });
   if (!path) throw new Error('There is no CLAUDE.md here, so there is nothing to import into. Longevo does not create one.');
-  if (lstatSync(path).isSymbolicLink()) {
-    throw new Error(`${rel(sc, path)} is a link to ${relative(dirname(path), realpathSync(path))}, so Claude Code already reads that file. Nothing to import.`);
-  }
   const agents = join(dirname(path).replace(/\/\.claude$/, ''), 'AGENTS.md');
+  if (lstatSync(path).isSymbolicLink()) {
+    const target = relative(dirname(path), realpathSync(path));
+    // A link to another folder's AGENTS.md: writing would change that file, and Claude Code still misses this folder's.
+    if (existsSync(agents) && realpathSync(agents) !== realpathSync(path)) {
+      throw new Error(`${rel(sc, path)} is a link to ${target}, not to ${rel(sc, agents)}. Replace the link, or import ${rel(sc, agents)} by hand.`);
+    }
+    throw new Error(`${rel(sc, path)} is a link to ${target}, so Claude Code already reads that file. Nothing to import.`);
+  }
   if (existsSync(agents) && realpathSync(agents) === realpathSync(path)) {
     throw new Error(`${rel(sc, path)} and ${rel(sc, agents)} are the same file, so every agent reads the same rules. Nothing to import.`);
   }

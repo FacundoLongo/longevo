@@ -1,6 +1,6 @@
 ---
 covers: ["src/lib/agents.mjs", "src/lib/instructions.mjs", ".claude-plugin/**", ".codex-plugin/**", ".cursor-plugin/**", "gemini-extension.json"]
-verified: 2026-10-23T21:18:11
+verified: 2026-10-23T21:21:49
 ---
 
 # Agents

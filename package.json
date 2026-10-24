@@ -1,6 +1,6 @@
 {
   "name": "longevo",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "private": true,
   "description": "Agent skills for better tests and docs that stay true to the code.",
   "license": "MIT",

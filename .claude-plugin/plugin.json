@@ -1,7 +1,7 @@
 {
   "name": "longevo",
   "description": "Agent skills for better tests and docs that stay true to the code.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "author": { "name": "Facundo Longo" },
   "homepage": "https://github.com/FacundoLongo/longevo",
   "repository": "https://github.com/FacundoLongo/longevo",

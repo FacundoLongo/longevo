@@ -1,6 +1,6 @@
 ---
 covers: ["tests/helpers/**", "package.json"]
-verified: 2026-10-23
+verified: 2026-10-23T21:11:16
 ---
 
 # Testing

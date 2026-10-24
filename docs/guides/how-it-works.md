@@ -1,6 +1,6 @@
 ---
 covers: ["skills/*/SKILL.md", "src/lib/apply.mjs", "src/lib/docs.mjs", "src/lib/rules.mjs"]
-verified: 2026-10-23T20:39:46
+verified: 2026-10-23T21:18:11
 ---
 
 # How Longevo works

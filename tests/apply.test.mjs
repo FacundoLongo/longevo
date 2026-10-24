@@ -139,6 +139,19 @@ test('verified false removes a verified date the doc already had', () => {
   assert.equal(read(root, 'docs/pay.md'), '---\ntitle: Pay\ncovers: ["src/pay/**"]\n---\n# Pay\n');
 });
 
+test('import adds the AGENTS.md of the folder when CLAUDE.md imports another one', () => {
+  const nested = makeRepo({ 'AGENTS.md': '# R\n', 'packages/a/AGENTS.md': '# A\n', 'packages/a/CLAUDE.md': '@../../AGENTS.md\n' });
+  assert.equal(apply('import', join(nested, 'packages/a'), {}).status, 'written');
+  assert.equal(read(nested, 'packages/a/CLAUDE.md'), '@AGENTS.md\n\n@../../AGENTS.md\n');
+  const missing = makeRepo({ 'packages/a/AGENTS.md': '# A\n', 'packages/a/CLAUDE.md': '@../AGENTS.md\n' });
+  assert.equal(apply('import', join(missing, 'packages/a'), {}).status, 'written');
+  const dotClaude = makeRepo({ 'AGENTS.md': '# R\n', '.claude/CLAUDE.md': '@AGENTS.md\n' });
+  apply('import', dotClaude, {});
+  assert.equal(read(dotClaude, '.claude/CLAUDE.md'), '@../AGENTS.md\n\n@AGENTS.md\n');
+  const done = makeRepo({ 'AGENTS.md': '# R\n', 'CLAUDE.md': '# Claude\n@./AGENTS.md\n' });
+  assert.equal(apply('import', done, {}).status, 'unchanged');
+});
+
 test('writes the coverage record, then reports it as unchanged', () => {
   const root = makeRepo({ 'src/a.ts': '1', 'src/a.test.ts': 'test()' });
   assert.equal(apply('coverage', root, {}).status, 'written');

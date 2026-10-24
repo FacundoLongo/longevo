@@ -20,14 +20,13 @@ export const isInstructionFile = (file) => PATTERNS.some((pattern) => pattern.te
 
 const base = (file) => file.split('/').pop();
 
-// An @AGENTS.md import in CLAUDE.md, also written as @./AGENTS.md or @../AGENTS.md.
-export const IMPORTS_AGENTS = /(^|\s)@(?:\.{1,2}\/)*AGENTS\.md\b/m;
-
-// The repo path of the AGENTS.md that this CLAUDE.md imports, or null.
-function importedAgents(path, text = '') {
-  const match = prose(text).match(/(?:^|\s)@((?:\.{1,2}\/)*AGENTS\.md)\b/m);
-  return match ? posix.normalize(posix.join(dirOf(path) || '.', match[1])) : null;
+// The repo paths of every AGENTS.md that this CLAUDE.md imports: @AGENTS.md, @./AGENTS.md or @../AGENTS.md.
+export function agentsImports(path, text = '') {
+  return [...prose(text).matchAll(/(?:^|\s)@((?:\.{1,2}\/)*AGENTS\.md)\b/gm)].map((match) => posix.normalize(posix.join(dirOf(path) || '.', match[1])));
 }
+
+// The first AGENTS.md this CLAUDE.md imports, or null.
+const importedAgents = (path, text) => agentsImports(path, text)[0] ?? null;
 
 // The folder an instruction file applies to: .cursor/rules, .github and .claude belong to their parent.
 function ownerDir(file) {
@@ -77,9 +76,11 @@ export function whoLoads(dirs, files, texts, { geminiFiles = ['GEMINI.md'], alia
   const inChain = (name) => files.filter((file) => base(file) === name && dirs.includes(ownerDir(file)));
   const claudeFiles = [...inChain('CLAUDE.md'), ...inChain('CLAUDE.local.md')];
   const agentsFiles = inChain('AGENTS.md');
-  const sameAsAgents = (file) => (aliases.get(file) ?? []).some((member) => base(member) === 'AGENTS.md');
-  const importsAgents = claudeFiles.some((file) => sameAsAgents(file) || IMPORTS_AGENTS.test(prose(texts[file] ?? '')));
-  const claude = claudeFiles.length ? [...claudeFiles, ...(importsAgents ? agentsFiles : [])] : agentsFiles;
+  // Claude Code loads an AGENTS.md only when a CLAUDE.md imports that file, or is the same file on disk.
+  const imported = new Set(claudeFiles.flatMap((file) => agentsImports(file, texts[file])));
+  // A file linked to an imported AGENTS.md, or to a CLAUDE.md, is the same text on disk.
+  const linked = (file) => (aliases.get(file) ?? []).some((member) => claudeFiles.includes(member) || imported.has(member));
+  const claude = claudeFiles.length ? [...claudeFiles, ...agentsFiles.filter((file) => imported.has(file) || linked(file))] : agentsFiles;
   const codex = dirs.flatMap((dir) => {
     const prefix = dir ? `${dir}/` : '';
     const override = files.find((file) => file === `${prefix}AGENTS.override.md`);
@@ -109,12 +110,16 @@ export function instructionFindings(inv, loads, texts = {}, aliases = new Map())
   if (!claude.length && !hasAgents) {
     findings.push({ id: 'no-entry-file', severity: 'high', message: 'There is no AGENTS.md or CLAUDE.md in this folder or its parents.' });
   }
-  if (claudeFiles.length && hasAgents && !claude.some((file) => base(file) === 'AGENTS.md')) {
+  // Each CLAUDE.md whose folder has an AGENTS.md that Claude Code does not load.
+  const seen = (path) => (aliases.get(path) ?? [path]).some((member) => claude.includes(member));
+  const unseen = inv.filter((f) => base(f.path) === 'AGENTS.md' && !seen(f.path)).map((f) => f.path);
+  const blind = claudeFiles.filter((file) => unseen.some((agents) => ownerDir(agents) === ownerDir(file)));
+  if (blind.length) {
     findings.push({
       id: 'claude-sees-only-claude-md',
       severity: 'high',
-      evidence: claudeFiles,
-      message: 'CLAUDE.md and AGENTS.md both exist, and CLAUDE.md does not import @AGENTS.md. Claude Code loads only CLAUDE.md, and the other agents load only AGENTS.md.',
+      evidence: blind,
+      message: 'CLAUDE.md and AGENTS.md both exist, and CLAUDE.md does not import the AGENTS.md in its folder. Claude Code loads only CLAUDE.md, and the other agents load only AGENTS.md.',
     });
   }
   if (claudeFiles.length && !hasAgents) {

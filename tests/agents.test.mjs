@@ -194,6 +194,8 @@ test('CLAUDE.local.md hides AGENTS.md only when no CLAUDE.md imports it', () => 
   assert.ok(ids(scan(hidden, { home })).includes('claude-local-hides-agents'));
   const imported = makeRepo({ 'AGENTS.md': '# Rules\n- Use pnpm\n', 'CLAUDE.md': '@AGENTS.md\n', 'CLAUDE.local.md': '- My editor\n' });
   assert.ok(!ids(scan(imported, { home })).includes('claude-local-hides-agents'));
+  const noImport = scan(makeRepo({ 'AGENTS.md': '# Rules\n- Use pnpm\n', 'CLAUDE.md': '- Claude\n', 'CLAUDE.local.md': '- My editor\n' }), { home });
+  assert.ok(!ids(noImport).includes('claude-local-hides-agents') && ids(noImport).includes('claude-sees-only-claude-md'));
 });
 
 test('does not count nested instruction files as unshared when run from the root', () => {

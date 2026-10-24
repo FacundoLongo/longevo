@@ -45,7 +45,9 @@ export function scan(cwd, { markSession = false, home = homedir() } = {}) {
       return false;
     }
   };
-  const instructionFiles = findInstructionFiles(files, dirs).filter(present);
+  // CLAUDE.local.md is personal and usually ignored by git, so it is looked up on disk in each folder of the chain.
+  const localFiles = dirs.map((dir) => (dir ? `${dir}/CLAUDE.local.md` : 'CLAUDE.local.md')).filter((file) => !files.includes(file) && present(file));
+  const instructionFiles = [...findInstructionFiles(files, dirs).filter(present), ...localFiles];
   const raw = Object.fromEntries(instructionFiles.map((file) => [file, readText(join(sc.root, file))]));
   const texts = Object.fromEntries(instructionFiles.map((file) => [file, raw[file] ?? '']));
   const instructionInventory = inventory(sc, instructionFiles, raw);

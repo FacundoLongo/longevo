@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 - `claude-local-hides-agents` no longer fires when CLAUDE.md imports AGENTS.md ([#8](https://github.com/FacundoLongo/longevo/issues/8)).
 - `apply import` on a CLAUDE.md linked to another folder's AGENTS.md says to replace the link, instead of saying Claude Code already reads the file.
+- The scan finds a `CLAUDE.local.md` that git ignores, so `claude-local-hides-agents` works where that file usually lives ([#10](https://github.com/FacundoLongo/longevo/issues/10)).
 
 ## [0.2.2] - 2026-10-23
 

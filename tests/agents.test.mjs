@@ -198,6 +198,12 @@ test('CLAUDE.local.md hides AGENTS.md only when no CLAUDE.md imports it', () => 
   assert.ok(!ids(noImport).includes('claude-local-hides-agents') && ids(noImport).includes('claude-sees-only-claude-md'));
 });
 
+test('a CLAUDE.local.md that git ignores still counts', () => {
+  const root = makeRepo({ '.gitignore': 'CLAUDE.local.md\n', 'AGENTS.md': '# Rules\n- Use pnpm\n', 'CLAUDE.local.md': '- My editor\n' });
+  const report = scan(root, { home: newHome({ '.claude/x': '', '.codex/x': '' }) });
+  assert.ok(ids(report).includes('claude-local-hides-agents'), JSON.stringify(ids(report)));
+});
+
 test('does not count nested instruction files as unshared when run from the root', () => {
   const root = makeRepo({ 'AGENTS.md': '# Rules\n- a\n', 'packages/a/AGENTS.md': '# A\n- b\n' });
   const report = scan(root, { home: newHome({ '.claude/x': '' }) });

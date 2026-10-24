@@ -11,7 +11,7 @@ What Longevo keeps in a repo, how those docs stay alive, and how it works in lar
 
 Longevo keeps no folder of its own. Its docs live in `docs/`, and its state for each machine (the last session, the changes you declined) lives in `.git/longevo/` ([D9](../decisions/docs.md)).
 
-Only what the code cannot say: business rules, decisions and their reasons, invariants, links to external sources and the list of golden tests. AGENTS.md is a map: each line has a trigger the agent can observe ("If you change `src/payments/**`, read `docs/domain/payments.md`."), so it loads a doc only when it needs it. Never folder maps, code tours or dependency lists. The agent reads those from the repo, and they go out of date first.
+Only what the code cannot say: business rules, decisions and their reasons, invariants, links to external sources and the list of golden tests. Never folder maps, code tours or dependency lists. The agent reads those from the repo, and they go out of date first. AGENTS.md is a map: each line has a trigger the agent can observe ("If you change `src/payments/**`, read `docs/domain/payments.md`."), so it loads a doc only when it needs it.
 
 ```
 AGENTS.md                     # short map (~100 lines): commands, triggers, hard rules

@@ -123,6 +123,7 @@ function changedFiles(sc, commit) {
   return { changed, untracked, generated };
 }
 
+// Lines added and removed, without skipped files; an untracked file counts all its lines as added.
 function diffSize(sc, commit, skippedPaths, untrackedText) {
   const numstat = lines(git(sc.root, [...DIFF, '--numstat', commit])).map((row) => row.split('\t'));
   const counted = numstat.filter(([, , path]) => !skippedPaths.has(path));
@@ -148,6 +149,7 @@ function docsAndRules(sc, files, touched, commit) {
   return { docsToUpdate, rules };
 }
 
+// Secret and security findings on the diff lines and in untracked files.
 function diffSecurity(sc, commit, skippedPaths, untrackedText) {
   const security = [];
   // The same three lines of context as diffCommand, so every line the reviewer reads is checked.

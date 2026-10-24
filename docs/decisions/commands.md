@@ -1,6 +1,6 @@
 # Command decisions
 
-How Longevo commands ask before they write, and who writes each change.
+How Longevo commands ask before they write, who writes each change, and what computes the facts they use.
 
 ## D7. Pick changes from a numbered list; a script writes the structured ones
 

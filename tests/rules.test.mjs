@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { findRules, parseRules, ruleFindings } from '../src/lib/rules.mjs';
 import { scope } from '../src/lib/repo.mjs';
-import { gitIn, makeRepo } from './helpers/fixture.mjs';
+import { isTestFile } from '../src/lib/tests.mjs';
+import { gitIn, makeRepo, writeFiles } from './helpers/fixture.mjs';
 
 const RULE = [
   '# Payments rules',
@@ -125,4 +126,44 @@ test('apostrophes in an unquoted test name are part of the name; a quoted name w
   const [late, fees] = parseRules('docs/domain/pay.md', text);
   assert.equal(late.test, "doesn't refund when it's late");
   assert.equal(fees.test, 'keeps the fee');
+});
+
+test('a rule test written but not added to git yet is found', () => {
+  const root = makeRepo({ 'docs/r.md': '### R-A-001 · x\nSource: s\nCode: a.ts:1\nTest: "handles the new case"\nStatus: implemented and tested\n', 'a.ts': '1\n' });
+  writeFiles(root, { 'a.test.ts': "test('handles the new case', () => {})\n" });
+  const files = [...listed(root), 'a.test.ts'];
+  assert.deepEqual(ruleFindings(scope(root), findRules(scope(root), files), ['a.test.ts']), []);
+});
+
+test('rules are checked against the disk, not only against the scanned file list', () => {
+  const root = makeRepo({ 'docs/r.md': '### R-A-001 · x\nSource: s\nCode: src/a.ts:1\nStatus: implemented without test\n', 'src/a.ts': '1\n' });
+  const rules = findRules(scope(root), listed(root));
+  assert.deepEqual(ruleFindings(scope(root), rules, []), []);
+});
+
+test('rules written by the format get no false findings', () => {
+  assert.ok(isTestFile('src/refunds/__tests__/refund.js'));
+  const doc = '### R-A-001 · Planned\nSource: s\nCode: src/planned.ts:1\nStatus: missing\n\n### R-A-002 · No source yet\nCode: src/a.ts:1\nStatus: no source\n';
+  const root = makeRepo({ 'docs/r.md': doc, 'src/a.ts': '1\n' });
+  const files = listed(root);
+  assert.deepEqual(ruleFindings(scope(root), findRules(scope(root), files), []), []);
+});
+
+test('test names: a backticked or quoted name after a path, but never a path or an apostrophe', async () => {
+  const { parseRules } = await import('../src/lib/rules.mjs');
+  const tests = (lines) => parseRules('docs/domain/pay.md', lines.map((t, i) => `### R-PAY-${i + 1} · x\nTest: ${t}\n`).join('')).map((r) => r.test);
+  assert.deepEqual(tests([
+    'tests/refund.test.ts `rejects a refund after 48 hours`',
+    "it('keeps the fee')",
+    "doesn't refund when it's late",
+    '`tests/x.test.ts` `keeps the fee`',
+    "tests/x.test.ts 'keeps the fee'",
+  ]), ['rejects a refund after 48 hours', 'keeps the fee', "doesn't refund when it's late", 'keeps the fee', 'keeps the fee']);
+});
+
+test('a backticked name with a dot is a name, and stray backticks never stay in it', async () => {
+  const { parseRules } = await import('../src/lib/rules.mjs');
+  const [first, second] = parseRules('docs/domain/pay.md', '### R-PAY-1 · x\nTest: `refunds.test` expires\n### R-PAY-2 · y\nTest: `src/pay.test.ts`\n');
+  assert.equal(first.test, 'refunds.test');
+  assert.equal(second.test, 'src/pay.test.ts');
 });

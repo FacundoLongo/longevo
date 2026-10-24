@@ -22,13 +22,7 @@ The five skills (four commands and the testing skill), how they ask and what the
 3. **Propose.** A short report, then a numbered list of changes, each with its diff.
 4. **You pick.** One question: "Which ones do I apply? [All / Pick numbers / None]". Longevo applies only those, shows `git status --short` and `git diff --stat`, and stops. It never stages or commits ([D7](../decisions/commands.md)).
 
-Example questions:
-
-- "CI runs `turbo run test`, but AGENTS.md does not say how to run a single test. What is the command?"
-- "CLAUDE.md and AGENTS.md have different rules, and each agent loads only one. Should I move everything to AGENTS.md? [Yes / Report only]"
-- "`docs/domain/payments.md` says a refund expires after 48 h, but `refund.ts:88` uses 72 h. Which one is right? [The code / The doc]"
-
-It never asks what it can read from the repo, never asks "should I continue?" and adds no small talk.
+For example: "`docs/domain/payments.md` says a refund expires after 48 h, but `refund.ts:88` uses 72 h. Which one is right? [The code / The doc]". It never asks what it can read from the repo, never asks "should I continue?" and adds no small talk.
 
 ## The three moments of `init`
 
@@ -55,17 +49,7 @@ The engine (`longevo.mjs apply`) writes the block, the `@AGENTS.md` line, the Ge
 
 ### The Longevo block
 
-```markdown
-<!-- longevo:start -->
-## Longevo
-- Run all tests: `pnpm test`
-- Run one test: `pnpm vitest run src/cart.test.ts`
-- If you write or change tests, read `docs/testing.md`.
-- If you change `src/payments/**`, read `docs/payments.md`.
-- What is tested and documented: `docs/coverage.md`.
-- Start each session with the `longevo-init` skill.
-<!-- longevo:end -->
-```
+The block holds the test commands, the testing doc, one trigger per living doc, the coverage record and the session line. [apply.md](../../skills/longevo-init/references/apply.md) shows it line by line.
 
 - At most 12 lines between the markers. Commands keep the order given and triggers are sorted, so the same input always gives the same block. If the triggers do not fit, `init` asks which ones to keep; `docs/coverage.md` still lists every doc.
 - Every doc it cites exists, and every glob matches at least one file. If not, nothing is written.
@@ -80,16 +64,7 @@ The engine lists living docs whose `covers` changed after the anchor (every comm
 
 ## `brief`: input for spec-driven development
 
-`/longevo-brief` prepares what your spec tool needs. It does not replace it. It reads the task from your text, a GitHub issue (`gh issue view`), or a Linear, Jira or Notion link through MCP. Without MCP, it asks you to paste the task. After you say yes, the brief goes to `docs/work/<date>-<slug>/brief.md`, with `status`, `task` and `covers` in its frontmatter, and has these parts:
-
-- **Goal**, from the issue.
-- **Rules that apply**, each with its status (one of the five in the rules format).
-- **Affected code and docs.**
-- **Golden tests** to copy.
-- **What must not change.** Each item asks for a regression test.
-- **Open questions.**
-- **Acceptance criteria** as WHEN/THEN scenarios.
-- **Tests**, left empty for `longevo-testing` to fill when the tests are planned.
+`/longevo-brief` prepares what your spec tool needs. It does not replace it. It reads the task from your text, a GitHub issue (`gh issue view`), or a Linear, Jira or Notion link through MCP. Without MCP, it asks you to paste the task. After you say yes, the brief goes to `docs/work/<date>-<slug>/brief.md`, with `status`, `task` and `covers` in its frontmatter, and has these parts: the goal, the rules that apply (each with its status), the affected code and docs, golden tests to copy, what must not change (each item asks for a regression test), open questions, acceptance criteria as WHEN/THEN scenarios, and an empty "Tests" part that `longevo-testing` fills when the tests are planned.
 
 | Tool | How it uses the brief |
 | --- | --- |

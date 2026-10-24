@@ -1,12 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { hooks } from '../src/lib/hooks.mjs';
 import { scope } from '../src/lib/repo.mjs';
 import { gitIn, makeRepo } from './helpers/fixture.mjs';
 
 const listed = (root) => gitIn(root, 'ls-files').split('\n').filter(Boolean);
+const outside = () => {
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), 'longevo-outside-')));
+  writeFileSync(join(dir, 'notes.md'), '# Notes\n');
+  return dir;
+};
 
 test('reads pre-commit, husky, lefthook and lint-staged', () => {
   const root = makeRepo({
@@ -33,4 +39,13 @@ test('reads a local git hook but not the samples', () => {
 
 test('a repo without hooks has none', () => {
   assert.deepEqual(hooks(scope(makeRepo({ 'a.txt': 'a' })), ['a.txt']), []);
+});
+
+test('hooks outside the repo are not read', () => {
+  const home = outside();
+  mkdirSync(join(home, 'hooks'));
+  writeFileSync(join(home, 'hooks', 'pre-commit'), '#!/bin/sh\nexport API_KEY=abc123secretvalue\n');
+  const root = makeRepo({ 'a.txt': 'a' });
+  gitIn(root, 'config', 'core.hooksPath', join(home, 'hooks'));
+  assert.deepEqual(hooks(scope(root), listed(root)), []);
 });

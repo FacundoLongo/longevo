@@ -106,13 +106,9 @@ function skippedAs(path, generated) {
 
 const slugOf = (path) => path.split('/')[2]?.replace(/^\d{4}-\d{2}-\d{2}-/, '') ?? '';
 
-export function reviewReport(cwd, { base = null } = {}) {
-  const sc = scope(cwd);
-  const resolved = resolveBase(sc, base);
-  const empty = { version: VERSION, scope: sc, base: resolved, declined: declined(sc), changed: [], diffCommand: null, diffLines: { added: 0, removed: 0 }, docsToUpdate: [], rules: [], tests: [], code: [], brief: null, security: [], nothing: true };
-  if (!resolved?.commit) return redactDeep(empty);
-
-  const tracked = lines(git(sc.root, [...DIFF, '--name-status', resolved.commit])).map((row) => {
+// Tracked changes against the base and untracked files, each with `skipped` when it is generated or noise.
+function changedFiles(sc, commit) {
+  const tracked = lines(git(sc.root, [...DIFF, '--name-status', commit])).map((row) => {
     const [status, ...paths] = row.split('\t');
     const entry = { path: paths[paths.length - 1], status: { A: 'added', D: 'deleted', M: 'modified', R: 'renamed', C: 'copied' }[status[0]] ?? 'modified' };
     return status[0] === 'R' ? { ...entry, from: paths[0] } : entry;
@@ -124,6 +120,75 @@ export function reviewReport(cwd, { base = null } = {}) {
     const skipped = skippedAs(c.path, generated);
     return skipped ? { ...c, skipped } : c;
   });
+  return { changed, untracked, generated };
+}
+
+// Lines added and removed, without skipped files; an untracked file counts all its lines as added.
+function diffSize(sc, commit, skippedPaths, untrackedText) {
+  const numstat = lines(git(sc.root, [...DIFF, '--numstat', commit])).map((row) => row.split('\t'));
+  const counted = numstat.filter(([, , path]) => !skippedPaths.has(path));
+  const countLines = (text) => (text === '' ? 0 : text.replace(/\n$/, '').split('\n').length);
+  return {
+    added: counted.reduce((sum, [added]) => sum + (Number(added) || 0), 0) + untrackedText.reduce((sum, u) => sum + countLines(u.text), 0),
+    removed: counted.reduce((sum, [, removed]) => sum + (Number(removed) || 0), 0),
+  };
+}
+
+// Docs whose covers the change touches (the doc itself not changed), and the rules in those docs or in the code.
+function docsAndRules(sc, files, touched, commit) {
+  const living = livingDocs(sc, files, generatedFiles(sc, files), { drift: false }).living;
+  const docsToUpdate = living
+    .filter((doc) => !touched.includes(doc.path))
+    .map((doc) => ({ doc: doc.path, files: touched.filter((path) => matchesAny(path, doc.covers)) }))
+    .filter((entry) => entry.files.length > 0)
+    // The newest commit under the doc's covers, the same one sync puts in its decline key; null when only
+    // uncommitted changes touch it.
+    .map((entry) => ({ ...entry, newest: (git(sc.root, ['log', '-1', '--format=%H', `${commit}..HEAD`, '--', ...entry.files]) ?? '').trim().slice(0, 12) || null }));
+  const coveringDocs = new Set(living.filter((doc) => touched.some((path) => matchesAny(path, doc.covers))).map((doc) => doc.path));
+  const rules = findRules(sc, files).filter((rule) => coveringDocs.has(rule.doc) || rule.code.some((ref) => touched.includes(ref.path)));
+  return { docsToUpdate, rules };
+}
+
+// Secret and security findings on the diff lines and in untracked files.
+function diffSecurity(sc, commit, skippedPaths, untrackedText) {
+  const security = [];
+  // The same three lines of context as diffCommand, so every line the reviewer reads is checked.
+  for (const [file, { added, removed, context }] of changedLines(git(sc.root, [...DIFF, '-U3', commit]) ?? '')) {
+    if (skippedPaths.has(file)) continue;
+    security.push(...lineFindings(file, added));
+    const secrets = (entries, mark) => lineFindings(file, entries).filter((f) => isSecretKind(f.kind)).map((f) => ({ ...f, ...mark }));
+    security.push(...secrets(removed, { removed: true }), ...secrets(context, { context: true }));
+  }
+  for (const { path, text } of untrackedText) security.push(...securityFindings(path, text));
+  return security;
+}
+
+// The brief named after the branch wins; otherwise the open brief that covers the changed code.
+function branchBrief(sc, files, touched) {
+  const branch = git(sc.root, ['rev-parse', '--abbrev-ref', 'HEAD'])?.trim() ?? '';
+  const branchSlug = branch.split('/').pop();
+  const open = briefs(sc, files).filter((b) => b.status !== 'done');
+  const covering = open.filter((b) => touched.some((path) => matchesAny(path, b.covers)));
+  const named = (list) => list.find((b) => branchSlug && slugOf(b.path) === branchSlug);
+  const isDefault = defaultBranches(sc).includes(branch);
+  return named(covering) ?? covering[0] ?? (isDefault ? null : named(open)) ?? null;
+}
+
+// Paths are from the repo root (:(top)), so the command gives the same diff from any folder.
+function diffCommandFor(sc, commit, changed, generated) {
+  const exclude = changed.filter((c) => c.skipped && !generated.has(c.path)).map((c) => `:(top,exclude,literal)${c.path}`);
+  return [gitCommand(), '-C', sc.root, 'diff', '--no-ext-diff', '--no-color', '-U3', commit, '--', ':(top)',
+    ':(top,exclude,attr:linguist-generated)', ':(top,exclude,attr:linguist-generated=true)',
+    ':(top,exclude,attr:linguist-vendored)', ':(top,exclude,attr:linguist-vendored=true)', ...exclude];
+}
+
+export function reviewReport(cwd, { base = null } = {}) {
+  const sc = scope(cwd);
+  const resolved = resolveBase(sc, base);
+  const empty = { version: VERSION, scope: sc, base: resolved, declined: declined(sc), changed: [], diffCommand: null, diffLines: { added: 0, removed: 0 }, docsToUpdate: [], rules: [], tests: [], code: [], brief: null, security: [], nothing: true };
+  if (!resolved?.commit) return redactDeep(empty);
+
+  const { changed, untracked, generated } = changedFiles(sc, resolved.commit);
   const reviewed = changed.filter((c) => !c.skipped);
   if (reviewed.length === 0) return redactDeep({ ...empty, changed });
 
@@ -133,62 +198,19 @@ export function reviewReport(cwd, { base = null } = {}) {
   const touched = [...new Set(reviewed.flatMap((c) => (c.from ? [c.path, c.from] : [c.path])))];
   const present = reviewed.filter((c) => c.status !== 'deleted').map((c) => c.path);
   const skippedPaths = new Set(changed.filter((c) => c.skipped).map((c) => c.path));
-
-  const numstat = lines(git(sc.root, [...DIFF, '--numstat', resolved.commit])).map((row) => row.split('\t'));
   const untrackedText = untracked.filter((u) => !skippedPaths.has(u.path)).map((u) => ({ path: u.path, text: readText(join(sc.root, u.path)) ?? '' }));
-  const countLines = (text) => (text === '' ? 0 : text.replace(/\n$/, '').split('\n').length);
-  const diffLines = {
-    added: numstat.filter(([, , path]) => !skippedPaths.has(path)).reduce((sum, [added]) => sum + (Number(added) || 0), 0) + untrackedText.reduce((sum, u) => sum + countLines(u.text), 0),
-    removed: numstat.filter(([, , path]) => !skippedPaths.has(path)).reduce((sum, [, removed]) => sum + (Number(removed) || 0), 0),
-  };
-
-  const living = livingDocs(sc, files, generatedFiles(sc, files), { drift: false }).living;
-  const docsToUpdate = living
-    .filter((doc) => !touched.includes(doc.path))
-    .map((doc) => ({ doc: doc.path, files: touched.filter((path) => matchesAny(path, doc.covers)) }))
-    .filter((entry) => entry.files.length > 0)
-    // The newest commit under the doc's covers, the same one sync puts in its decline key; null when only
-    // uncommitted changes touch it.
-    .map((entry) => ({ ...entry, newest: (git(sc.root, ['log', '-1', '--format=%H', `${resolved.commit}..HEAD`, '--', ...entry.files]) ?? '').trim().slice(0, 12) || null }));
-  const coveringDocs = new Set(living.filter((doc) => touched.some((path) => matchesAny(path, doc.covers))).map((doc) => doc.path));
-  const rules = findRules(sc, files).filter((rule) => coveringDocs.has(rule.doc) || rule.code.some((ref) => touched.includes(ref.path)));
-
-  const security = [];
-  // The same three lines of context as diffCommand, so every line the reviewer reads is checked.
-  for (const [file, { added, removed, context }] of changedLines(git(sc.root, [...DIFF, '-U3', resolved.commit]) ?? '')) {
-    if (skippedPaths.has(file)) continue;
-    security.push(...lineFindings(file, added));
-    const secrets = (entries, mark) => lineFindings(file, entries).filter((f) => isSecretKind(f.kind)).map((f) => ({ ...f, ...mark }));
-    security.push(...secrets(removed, { removed: true }), ...secrets(context, { context: true }));
-  }
-  for (const { path, text } of untrackedText) security.push(...securityFindings(path, text));
-
-  // The brief named after the branch wins; otherwise the open brief that covers the changed code.
-  const branch = git(sc.root, ['rev-parse', '--abbrev-ref', 'HEAD'])?.trim() ?? '';
-  const branchSlug = branch.split('/').pop();
-  const open = briefs(sc, files).filter((b) => b.status !== 'done');
-  const covering = open.filter((b) => touched.some((path) => matchesAny(path, b.covers)));
-  const named = (list) => list.find((b) => branchSlug && slugOf(b.path) === branchSlug);
-  const isDefault = defaultBranches(sc).includes(branch);
-  const brief = named(covering) ?? covering[0] ?? (isDefault ? null : named(open)) ?? null;
-
-  // Paths are from the repo root (:(top)), so the command gives the same diff from any folder.
-  const exclude = changed.filter((c) => c.skipped && !generated.has(c.path)).map((c) => `:(top,exclude,literal)${c.path}`);
-  const diffCommand = [gitCommand(), '-C', sc.root, 'diff', '--no-ext-diff', '--no-color', '-U3', resolved.commit, '--', ':(top)',
-    ':(top,exclude,attr:linguist-generated)', ':(top,exclude,attr:linguist-generated=true)',
-    ':(top,exclude,attr:linguist-vendored)', ':(top,exclude,attr:linguist-vendored=true)', ...exclude];
+  const brief = branchBrief(sc, files, touched);
 
   return redactDeep({
     ...empty,
     changed,
-    diffCommand,
-    diffLines,
-    docsToUpdate,
-    rules,
+    diffCommand: diffCommandFor(sc, resolved.commit, changed, generated),
+    diffLines: diffSize(sc, resolved.commit, skippedPaths, untrackedText),
+    ...docsAndRules(sc, files, touched, resolved.commit),
     tests: analyzeTests(sc.root, present.filter(isTestFile), packages).map(({ file, kind, mocksStorage, callAsserts }) => ({ file, kind, mocksStorage, callAsserts })),
     code: present.filter((path) => CODE_FILE.test(path) && !isTestFile(path)),
     brief: brief && { path: brief.path, status: brief.status, task: brief.task },
-    security,
+    security: diffSecurity(sc, resolved.commit, skippedPaths, untrackedText),
     nothing: false,
   });
 }

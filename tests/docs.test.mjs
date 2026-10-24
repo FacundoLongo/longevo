@@ -1,7 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { apply } from '../src/lib/apply.mjs';
 import { livingDocs } from '../src/lib/docs.mjs';
+import { hotspots } from '../src/lib/hotspots.mjs';
 import { scope } from '../src/lib/repo.mjs';
 import { gitIn, makeRepo, writeFiles } from './helpers/fixture.mjs';
 
@@ -16,9 +20,18 @@ const commitAt = (root, files, message, date) => {
   gitIn(root, 'add', ...Object.keys(files));
   execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', message], { cwd: root, env: { ...process.env, GIT_AUTHOR_DATE: `${date}T12:00:00`, GIT_COMMITTER_DATE: `${date}T12:00:00` } });
 };
+// Like commitAt, with separate author and committer dates.
+const commitWithDates = (root, files, message, { author, committer }) => {
+  writeFiles(root, files);
+  gitIn(root, 'add', ...Object.keys(files));
+  execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', message], { cwd: root, env: { ...process.env, GIT_AUTHOR_DATE: `${author}T12:00:00`, GIT_COMMITTER_DATE: `${committer ?? author}T12:00:00` } });
+};
 const listed = (root) => gitIn(root, 'ls-files').split('\n').filter(Boolean);
 const docs = (root) => livingDocs(scope(root), listed(root), new Set());
+const living = (root) => livingDocs(scope(root), listed(root), new Set()).living;
+const read = (root, path) => readFileSync(join(root, path), 'utf8');
 const DOC = '---\ncovers: ["src/pay/**"]\nverified: 2026-10-01\n---\n# Pay\n';
+const OLD_DOC = '---\ncovers: ["src/pay/**"]\nverified: 2026-01-01\n---\n# Pay\n';
 
 test('a doc is stale when covered code changes after the verified line', () => {
   const root = makeRepo({ 'docs/pay.md': DOC, 'src/pay/a.ts': '1' });
@@ -226,4 +239,68 @@ test('the stale message says the code changed after the doc was verified, with t
   commit(root, { 'src/pay/a.ts': '2' }, 'change pay');
   const [finding] = docFindings(docs(root));
   assert.equal(finding.message, 'docs/pay.md covers code that changed after it was verified (2026-10-01): src/pay/a.ts.');
+});
+
+test('a commit with real code and many generated files still counts', () => {
+  const root = makeRepo({ '.gitattributes': 'gen/** linguist-generated=true\n', 'docs/pay.md': '---\ncovers: ["src/pay/**"]\nverified: 2026-10-01\n---\n', 'src/pay/a.ts': '1' });
+  commit(root, { 'src/pay/a.ts': '2', ...Object.fromEntries(Array.from({ length: 120 }, (_, i) => [`gen/f${i}.ts`, 'x'])) }, 'codegen and a fix');
+  const files = listed(root);
+  const generated = new Set(files.filter((f) => f.startsWith('gen/')));
+  assert.equal(livingDocs(scope(root), files, generated).living[0].stale, true);
+  assert.ok(hotspots(scope(root), files, [], { generated }).files.some((f) => f.file === 'src/pay/a.ts' && f.commits === 2));
+});
+
+test('a doc that starts with a byte order mark works like any other', () => {
+  const doc = '﻿---\ncovers: ["src/**"]\nverified: 2026-01-01\n---\n# A\n';
+  const root = makeRepo({ 'docs/a.md': doc, 'src/a.ts': '1' });
+  commit(root, { 'src/a.ts': '2' }, 'change');
+  const [living] = livingDocs(scope(root), listed(root), new Set()).living;
+  assert.equal(living.stale, true);
+  assert.equal(apply('verify', root, { doc: 'docs/a.md' }, { today: '2026-10-11' }).status, 'written');
+  assert.equal(read(root, 'docs/a.md'), doc.replace('2026-01-01', '2026-10-11'));
+  apply('frontmatter', root, { doc: 'docs/a.md', covers: ['src/**'], verified: '2026-10-12' });
+  assert.equal(read(root, 'docs/a.md').match(/---/g).length, 2);
+});
+
+test('a big commit, like a squash merge, still makes a doc stale', () => {
+  const root = makeRepo({ 'docs/pay.md': OLD_DOC, 'src/pay/a.ts': '1' });
+  commit(root, { ...Object.fromEntries(Array.from({ length: 120 }, (_, i) => [`src/other/f${i}.ts`, 'x'])), 'src/pay/a.ts': '2' }, 'Squash a big PR');
+  assert.deepEqual(living(root)[0].changed, ['src/pay/a.ts']);
+});
+
+test('moving a stale doc keeps it stale', () => {
+  const root = makeRepo({ 'docs/pay.md': OLD_DOC, 'src/pay/a.ts': '1' });
+  const anchor = gitIn(root, 'rev-parse', 'HEAD').trim();
+  commit(root, { 'src/pay/a.ts': '2' }, 'change');
+  gitIn(root, 'mv', 'docs/pay.md', 'docs/domain-pay.md');
+  gitIn(root, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', 'move the doc');
+  const [doc] = living(root);
+  assert.equal(doc.stale, true);
+  assert.equal(doc.anchor, anchor);
+});
+
+test('commits after an uncommitted check count by their dates, not by where git stops walking', () => {
+  const root = makeRepo({ 'src/pay/a.ts': '1' }, { git: false });
+  gitIn(root, 'init', '-q');
+  commitWithDates(root, { 'docs/pay.md': OLD_DOC, 'src/pay/a.ts': '1', 'src/pay/b.ts': '1', 'src/pay/c.ts': '1', 'src/pay/d.ts': '1' }, 'doc', { author: '2026-01-01' });
+  commitWithDates(root, { 'src/pay/a.ts': '2' }, 'after the check', { author: '2026-05-01' });
+  commitWithDates(root, { 'src/pay/b.ts': '2' }, 'clock skew, before the check', { author: '2026-03-01' });
+  commitWithDates(root, { 'src/pay/c.ts': '2' }, 'after the check again', { author: '2026-05-02' });
+  commitWithDates(root, { 'src/pay/d.ts': '2' }, 'written before, rebased after', { author: '2026-03-01', committer: '2026-05-03' });
+  writeFiles(root, { 'docs/pay.md': OLD_DOC.replace('2026-01-01', '2026-04-01') });
+  assert.deepEqual(living(root)[0].changed, ['src/pay/a.ts', 'src/pay/c.ts', 'src/pay/d.ts']);
+});
+
+test('verified of another tool, on a doc without covers, is not Longevo\'s to judge', () => {
+  const root = makeRepo({ 'docs/legal.md': '---\nverified:\n  - legal\n---\n# Legal\n' });
+  const result = livingDocs(scope(root), listed(root), new Set());
+  assert.deepEqual(result.invalid, []);
+  assert.deepEqual(result.candidates.map((c) => c.path), ['docs/legal.md']);
+});
+
+test('covers without a verified date is a finding, so the doc gets checked once', async () => {
+  const { docFindings } = await import('../src/lib/docs.mjs');
+  const root = makeRepo({ 'docs/pay.md': '---\ncovers: ["src/pay/**"]\n---\n# Pay\n', 'src/pay/a.ts': '1' });
+  const findings = docFindings(livingDocs(scope(root), listed(root), new Set()));
+  assert.deepEqual(findings.map((f) => f.id), ['doc-not-verified']);
 });

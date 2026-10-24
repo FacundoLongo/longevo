@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { realpathSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { scope } from '../src/lib/repo.mjs';
 import { commitsTouching, diffSince, syncReport } from '../src/sync.mjs';
@@ -105,4 +108,28 @@ test('a rule citing a brief whose name only starts with another brief does not h
 test('the sources file state carries a hash of the file it would write', () => {
   const root = makeRepo({ 'docs/a.md': '---\nsources:\n  - url: https://a\n    checked: 2026-10-01\n---\n' });
   assert.match(syncReport(root, { home: root }).sourcesFile.hash, /^[0-9a-f]{12}$/);
+});
+
+test('a folder that does not exist is an error, not an empty report', () => {
+  const missing = join(realpathSync(tmpdir()), 'longevo-missing-folder-xyz');
+  assert.throws(() => syncReport(missing), /does not exist/);
+});
+
+test('outside git the sync report says drift was not checked', () => {
+  const root = makeRepo({ 'docs/a.md': '---\ncovers: ["src/**"]\nverified: 2026-01-01\n---\n', 'src/x.ts': '1' }, { git: false });
+  assert.deepEqual(syncReport(root).notChecked, ['drift: this folder is not a git repo, so no doc can be stale']);
+});
+
+test('the sync report puts findings, declined and file states before the docs', () => {
+  const root = makeRepo({ 'docs/a.md': '---\ncovers: ["a.ts"]\nverified: 2026-10-01\n---\n# A\n', 'a.ts': '1' });
+  const keys = Object.keys(syncReport(root, { home: root, today: '2026-10-11' }));
+  for (const key of ['findings', 'declined', 'coverage', 'sourcesFile']) assert.ok(keys.indexOf(key) < keys.indexOf('docs'), key);
+});
+
+test('sync never prints a secret from a YAML file in its diff', () => {
+  const root = makeRepo({ 'docs/config.md': '---\ncovers: ["config/**"]\nverified: 2026-01-01\n---\n# Config\n', 'config/app.yml': 'name: app\n' });
+  commit(root, { 'config/app.yml': 'name: app\npassword: hunter2hunter2\napi_token: Zx9Qw8Er7Ty6Ui5\n' }, 'Add secrets');
+  const out = JSON.stringify(syncReport(root, { home: root }));
+  assert.equal(out.includes('hunter2hunter2'), false);
+  assert.equal(out.includes('Zx9Qw8Er7Ty6Ui5'), false);
 });
